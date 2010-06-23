@@ -31,9 +31,8 @@ class ValleyScraper(BaseScraper):
                 src = urllib.urlopen(base).read()
                 soup = BeautifulSoup(src)
 
-                c = 0
-                for tag in soup.findAll('a', href=re.compile("\.xml$")):
+                tags = soup.findAll('a', href=re.compile("\.xml$"))
+                for tag in tags:
                         ref = tag['href']
                         links.append(urlparse.urljoin(base, ref))
-                        c+=1
-                return c
+                return len(tags)
