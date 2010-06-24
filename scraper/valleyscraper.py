@@ -29,8 +29,8 @@ class ValleyScraper(BaseScraper):
 
                 print 'Found', len(links), 'newspapers total'
                 
-                for xml in links:
-                        self.parse(xml)
+                for link, tag in links:
+                        self.parse(link, tag)
                         break
 
 
@@ -43,11 +43,18 @@ class ValleyScraper(BaseScraper):
                 tags = soup.findAll('a', href=re.compile("\.xml$"))
                 for tag in tags:
                         ref = tag['href']
-                        links.append(urlparse.urljoin(base, ref))
+			fullurl = urlparse.urljoin(base, ref)
+			filename = ref[ref.rfind('/')+1:]
+                        links.append((fullurl, filename))
                 return len(tags)
 
-        def parse(self,link):
-                """Parse and write article files"""
+        def parse(self,link,tag):
+                """Parse and write article files.
+
+		link -- full url to newspaper document.
+		tag -- name of newspaper document, also the filename that's written.
+		"""
+
                 # Parse.
 
                 # Create XML tree.
@@ -69,7 +76,7 @@ class ValleyScraper(BaseScraper):
 
                 # write to file (for testing)
                 path = os.path.join(constants.BASE_DIR, \
-                        constants.VALLEY_DIR, 'placeholder.xml')
+                        constants.VALLEY_DIR, tag)
                 dirpath = os.path.dirname(path)
                 if not os.path.isdir(dirpath):
                         os.makedirs(dirpath)
@@ -77,6 +84,7 @@ class ValleyScraper(BaseScraper):
                 xml.writexml(f,'\t','\t','\n','UTF-8')
 
         def __createNode(self,name,text):
+		"""Create an XML node with text"""
                 xml = minidom.Document()
                 e = xml.createElement(name)
                 e.appendChild(xml.createTextNode(text))
