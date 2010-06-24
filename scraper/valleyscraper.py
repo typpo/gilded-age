@@ -5,6 +5,7 @@ import constants
 import abc
 import re
 import os
+import time
 import urllib
 import urlparse
 from xml.dom import minidom
@@ -31,7 +32,6 @@ class ValleyScraper(BaseScraper):
                 
                 for link, tag in links:
                         self.parse(link, tag)
-                        break
 
 
 
@@ -46,6 +46,7 @@ class ValleyScraper(BaseScraper):
 			fullurl = urlparse.urljoin(base, ref)
 			filename = ref[ref.rfind('/')+1:]
                         links.append((fullurl, filename))
+
                 return len(tags)
 
         def parse(self,link,tag):
@@ -53,9 +54,49 @@ class ValleyScraper(BaseScraper):
 
 		link -- full url to newspaper document.
 		tag -- name of newspaper document, also the filename that's written.
+
+		return -- True if successful, False otherwise
 		"""
 
                 # Parse.
+		print 'Loading', link
+                src = urllib.urlopen(link).read()
+                soup = BeautifulSoup(src)
+
+		# Parse date
+		# Formatted:
+		# Newspaper Name: August 5, 1859
+
+		# Search for section-head class
+		sectionheads = soup.findAll('h2', 'section-head')
+		if sectionheads is None or len(sectionheads) < 1:
+			return False
+
+		sectionhead = str(sectionheads[0])
+		strdate = re.match('^.*: ([^<]+)', sectionhead).group(1)
+		article_date = time.strptime(strdate, '%B %d, %Y')
+		print '\tDated', strdate
+
+		# Look for first page
+		# Look for p title class
+
+		page = soup.find('p', 'title')
+		strpageno = re.match('\D+(\d+)', str(page)).group(1)
+		article_pageno = int(strpageno)
+		print '\tPage', article_pageno
+
+		# Walk until we find a summary
+		# summary = page.findNext('blockquote', text=re.compile('Summary'))
+		# article_summary = str(summary.next)
+
+		# Walk until we find full text
+		text = page.findNext('blockquote', text=re.compile('Full Text'))
+		if text is None:
+			article_text = None
+		else:
+			article_text = str(''.join(text.findNext('p').contents))
+			article_text = re.sub('(\<br\s*/?\>|\n|\s{2,})', '', article_text)
+			print article_text
 
                 # Create XML tree.
                 xml = minidom.Document()
@@ -82,6 +123,8 @@ class ValleyScraper(BaseScraper):
                         os.makedirs(dirpath)
                 f = open(path, 'w')
                 xml.writexml(f,'\t','\t','\n','UTF-8')
+
+		return True
 
         def __createNode(self,name,text):
 		"""Create an XML node with text"""
