@@ -22,39 +22,37 @@ class ValleyScraper(BaseScraper):
         def execute(self):
                 """Loads urls in config files"""
                 sources = super(ValleyScraper, self).parseConfig(constants.VALLEY_CONFIG)
-                links = []
                 for source in sources:
-			for key in source:
-				c = self.extractLinks(key, source[key], links)
-				print '\tExtracted', c, 'newspapers from', key
-				break
+			c, extracted = self.extractLinks(source['url'])
+			for link, tag in extracted:
+				self.parse(link, tag, source)
 
                 print 'Found', len(links), 'newspapers total'
                 
-                for link, tag in links:
-                        self.parse(link, tag)
 
 
 
-        def extractLinks(self,paper,base,links):
+        def extractLinks(self,base):
                 """Extract all links that end in .xml"""
                 src = urllib.urlopen(base).read()
                 soup = BeautifulSoup(src)
 
                 tags = soup.findAll('a', href=re.compile("\.xml$"))
+		links = []
                 for tag in tags:
                         ref = tag['href']
 			fullurl = urlparse.urljoin(base, ref)
 			filename = ref[ref.rfind('/')+1:]
                         links.append((fullurl, filename))
 
-                return len(tags)
+                return len(tags), links
 
-        def parse(self,link,tag):
+        def parse(self,link,tag,source):
                 """Parse and write article files.
 
 		link -- full url to newspaper document.
 		tag -- name of newspaper document, also the filename that's written.
+		source -- dictionary representing the config settings for this source.
 
 		return -- True if successful, False otherwise
 		"""
@@ -76,8 +74,24 @@ class ValleyScraper(BaseScraper):
 		article_date = time.strptime(strdate, '%B %d, %Y')
 		print '\tDated', strdate
 
+                # Create XML tree.
+                xml = minidom.Document()
+                root = xml.createElement('ArticleRoot')
+                xml.appendChild(root)
+
+		# Add metadata
+                meta = xml.createElement('meta')
+                meta.appendChild(super(ValleyScraper, self).__createNode('newspaper', paper))
+                meta.appendChild(super(ValleyScraper, self).__createNode('alignment', source['alignment']))
+                meta.appendChild(super(ValleyScraper, self).__createNode('date', article_date))
+
+		# Create articles node
+		articles = xml.createElement('articles')
+
 		# Loop through pages
 		for page in soup.findAll('p', 'title'):
+			# Parse article
+			# TODO parse multiple articles per page
 			strpageno = re.match('\D+(\d+)', str(page)).group(1)
 			article_pageno = int(strpageno)
 			print '\tPage', article_pageno
@@ -103,25 +117,21 @@ class ValleyScraper(BaseScraper):
 				article_text = re.sub('(\<br\s*/?\>|\n|\s{2,})', '', article_text)
 				print article_text
 
-                # Create XML tree.
-                xml = minidom.Document()
-                root = xml.createElement('ArticleRoot')
-                xml.appendChild(root)
+			# Add article to xml tree
+			article = xml.createElement('article')
+			article.appendChild(super(ValleyScraper, self).__createNode('page', article_pageno))
+			article.appendChild(super(ValleyScraper, self).__createNode('summary', article_summary))
+			article.appendChild(super(ValleyScraper, self).__createNode('text', article_text))
+			articles.appendChild(article)
 
-                meta = xml.createElement('meta')
-                meta.appendChild(super.__createNode('newspaper', paper))
-                meta.appendChild(super.__createNode('date', article_date))
-                meta.appendChild(super.__createNode('alignment', '...'))
 
-                data = xml.createElement('data')
-                data.appendChild(super.__createNode('summary','...'))
-                data.appendChild(super.__createNode('text','...'))
-
+		# Finish off XML tree
                 root.appendChild(meta)
-                root.appendChild(data)
+                root.appendChild(articles)
 
+		# And write it to file
                 path = os.path.join(constants.BASE_DIR, \
                         constants.VALLEY_DIR, tag)
-		super.__writeXml(path, xml)
+		super(ValleyScraper, self).__writeXml(path, xml)
 
 		return True
