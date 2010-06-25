@@ -1,7 +1,7 @@
 """
 Project constants file
 """
-DB_FILE = 'test.db'
+DB_FILE = 'output/test.db'
 BASE_DIR = 'output'
 
 """

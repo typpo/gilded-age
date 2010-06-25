@@ -68,37 +68,47 @@ class ValleyScraper(BaseScraper):
 		# Newspaper Name: August 5, 1859
 
 		# Search for section-head class
-		sectionheads = soup.findAll('h2', 'section-head')
-		if sectionheads is None or len(sectionheads) < 1:
-			return False
+		sectionhead = soup.find('h2', 'section-head')
 
-		sectionhead = str(sectionheads[0])
-		strdate = re.match('^.*: ([^<]+)', sectionhead).group(1)
+		# Extract date
+		strdate = re.match('^.*: ([^<]+)', str(sectionhead)).group(1)
 		article_date = time.strptime(strdate, '%B %d, %Y')
 		print '\tDated', strdate
 
 		# Look for first page
 		# Look for p title class
 
-		page = soup.find('p', 'title')
-		strpageno = re.match('\D+(\d+)', str(page)).group(1)
-		article_pageno = int(strpageno)
-		print '\tPage', article_pageno
+		for page in soup.findAll('p', 'title'):
+			strpageno = re.match('\D+(\d+)', str(page)).group(1)
+			article_pageno = int(strpageno)
+			print '\tPage', article_pageno
 
-		# Walk until we find a summary
-		# summary = page.findNext('blockquote', text=re.compile('Summary'))
-		# article_summary = str(summary.next)
+			# Walk until we find a summary
+			summary = page.findNext('blockquote', text=re.compile('Summary'))
+			if summary is None:
+				article_summary = None
+			else:
+				summary = summary.next
+				article_summary = re.sub('(\<br\s*/?\>|\n|\s{2,})', '', summary)
 
-		# Walk until we find full text
-		text = page.findNext('blockquote', text=re.compile('Full Text'))
-		if text is None:
-			article_text = None
-		else:
-			article_text = str(''.join(text.findNext('p').contents))
-			article_text = re.sub('(\<br\s*/?\>|\n|\s{2,})', '', article_text)
-			print article_text
+			if article_summary is None:
+				return False
+
+			# Look for full text associated with summary
+			# TODO do all articles have a summary?
+			text = page.findNext('blockquote', text=re.compile('.*(Full Text).*(Summary)?'))
+			if text is None:
+				article_text = None
+			else:
+
+				article_text = str(''.join(text.findNext('p').contents))
+				article_text = re.sub('(\<br\s*/?\>|\n|\s{2,})', '', article_text)
+				print article_text
 
                 # Create XML tree.
+
+		# TODO don't go if summary or text is null
+
                 xml = minidom.Document()
                 root = xml.createElement('ArticleRoot')
                 xml.appendChild(root)
@@ -115,14 +125,9 @@ class ValleyScraper(BaseScraper):
                 root.appendChild(meta)
                 root.appendChild(data)
 
-                # write to file (for testing)
                 path = os.path.join(constants.BASE_DIR, \
                         constants.VALLEY_DIR, tag)
-                dirpath = os.path.dirname(path)
-                if not os.path.isdir(dirpath):
-                        os.makedirs(dirpath)
-                f = open(path, 'w')
-                xml.writexml(f,'\t','\t','\n','UTF-8')
+		self.__writeXml(path, xml)
 
 		return True
 
@@ -132,3 +137,12 @@ class ValleyScraper(BaseScraper):
                 e = xml.createElement(name)
                 e.appendChild(xml.createTextNode(text))
                 return e
+
+	def __writeXml(self, path, xml):
+                """Write XML doc to file"""
+		print 'Writing to', path
+                dirpath = os.path.dirname(path)
+                if not os.path.isdir(dirpath):
+                        os.makedirs(dirpath)
+                f = open(path, 'w')
+                xml.writexml(f,'\t','\t','\n','UTF-8')
