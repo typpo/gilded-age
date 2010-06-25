@@ -1,6 +1,7 @@
 from BeautifulSoup import BeautifulSoup
 from ConfigParser import ConfigParser
 from basescraper import BaseScraper
+from xml.dom import minidom
 import constants
 import abc
 import re
@@ -8,7 +9,6 @@ import os
 import time
 import urllib
 import urlparse
-from xml.dom import minidom
 
 class ValleyScraper(BaseScraper):
         """Class for scraping Valley of the Shadow Project
@@ -75,9 +75,7 @@ class ValleyScraper(BaseScraper):
 		article_date = time.strptime(strdate, '%B %d, %Y')
 		print '\tDated', strdate
 
-		# Look for first page
-		# Look for p title class
-
+		# Loop through pages
 		for page in soup.findAll('p', 'title'):
 			strpageno = re.match('\D+(\d+)', str(page)).group(1)
 			article_pageno = int(strpageno)
@@ -100,7 +98,6 @@ class ValleyScraper(BaseScraper):
 			if text is None:
 				article_text = None
 			else:
-
 				article_text = str(''.join(text.findNext('p').contents))
 				article_text = re.sub('(\<br\s*/?\>|\n|\s{2,})', '', article_text)
 				print article_text

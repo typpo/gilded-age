@@ -7,5 +7,5 @@ BASE_DIR = 'output'
 """
 Scraper constants
 """
-VALLEY_CONFIG = 'scraper/valley.cfg'
+VALLEY_CONFIG = 'valley.cfg'
 VALLEY_DIR = 'valley'
