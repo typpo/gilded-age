@@ -19,11 +19,13 @@ class BaseScraper(object):
                 config.readfp(open(path))
                 config.read
 
-                sourcedict = {}
+                sources = []
                 for section in config.sections():
-                        url = config.get(section, 'url', 0)
-                        sourcedict[section] = url
-                return sourcedict
+                        sectiondict = {}
+			for key, val in config.items(section):
+				sectiondict[key] = val
+			sources.append(sectiondict)
+                return sources
 
 
         @abc.abstractmethod
@@ -31,3 +33,18 @@ class BaseScraper(object):
                 """Run scraper"""
                 return
 
+        def __createTextNode(self,name,text):
+		"""Create an XML node containing text"""
+                xml = minidom.Document()
+                e = xml.createElement(name)
+                e.appendChild(xml.createTextNode(text))
+                return e
+
+	def __writeXml(self, path, xml):
+                """Write XML doc to file"""
+		print 'Writing to', path
+                dirpath = os.path.dirname(path)
+                if not os.path.isdir(dirpath):
+                        os.makedirs(dirpath)
+                f = open(path, 'w')
+                xml.writexml(f,'\t','\t','\n','UTF-8')

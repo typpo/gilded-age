@@ -21,12 +21,13 @@ class ValleyScraper(BaseScraper):
 
         def execute(self):
                 """Loads urls in config files"""
-                targets = super(ValleyScraper, self).parseConfig(constants.VALLEY_CONFIG)
+                sources = super(ValleyScraper, self).parseConfig(constants.VALLEY_CONFIG)
                 links = []
-                for key in targets:
-                        c = self.extractLinks(targets[key], links)
-                        print '\tExtracted', c, 'newspapers from', key
-                        break
+                for source in sources:
+			for key in source:
+				c = self.extractLinks(key, source[key], links)
+				print '\tExtracted', c, 'newspapers from', key
+				break
 
                 print 'Found', len(links), 'newspapers total'
                 
@@ -35,7 +36,7 @@ class ValleyScraper(BaseScraper):
 
 
 
-        def extractLinks(self,base,links):
+        def extractLinks(self,paper,base,links):
                 """Extract all links that end in .xml"""
                 src = urllib.urlopen(base).read()
                 soup = BeautifulSoup(src)
@@ -103,43 +104,24 @@ class ValleyScraper(BaseScraper):
 				print article_text
 
                 # Create XML tree.
-
-		# TODO don't go if summary or text is null
-
                 xml = minidom.Document()
                 root = xml.createElement('ArticleRoot')
                 xml.appendChild(root)
 
                 meta = xml.createElement('meta')
-                meta.appendChild(self.__createNode('newspaper','...'))
-                meta.appendChild(self.__createNode('date','...'))
-                meta.appendChild(self.__createNode('alignment','...'))
+                meta.appendChild(super.__createNode('newspaper', paper))
+                meta.appendChild(super.__createNode('date', article_date))
+                meta.appendChild(super.__createNode('alignment', '...'))
 
                 data = xml.createElement('data')
-                data.appendChild(self.__createNode('summary','...'))
-                data.appendChild(self.__createNode('text','...'))
+                data.appendChild(super.__createNode('summary','...'))
+                data.appendChild(super.__createNode('text','...'))
 
                 root.appendChild(meta)
                 root.appendChild(data)
 
                 path = os.path.join(constants.BASE_DIR, \
                         constants.VALLEY_DIR, tag)
-		self.__writeXml(path, xml)
+		super.__writeXml(path, xml)
 
 		return True
-
-        def __createNode(self,name,text):
-		"""Create an XML node with text"""
-                xml = minidom.Document()
-                e = xml.createElement(name)
-                e.appendChild(xml.createTextNode(text))
-                return e
-
-	def __writeXml(self, path, xml):
-                """Write XML doc to file"""
-		print 'Writing to', path
-                dirpath = os.path.dirname(path)
-                if not os.path.isdir(dirpath):
-                        os.makedirs(dirpath)
-                f = open(path, 'w')
-                xml.writexml(f,'\t','\t','\n','UTF-8')
