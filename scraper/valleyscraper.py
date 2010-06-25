@@ -28,9 +28,6 @@ class ValleyScraper(BaseScraper):
 				self.parse(link, tag, source)
 
                 print 'Found', len(links), 'newspapers total'
-                
-
-
 
         def extractLinks(self,base):
                 """Extract all links that end in .xml"""
@@ -93,42 +90,19 @@ class ValleyScraper(BaseScraper):
 
 		# Loop through pages
 		for page in soup.findAll('p', 'title'):
-			# Parse article
-			# TODO parse multiple articles per page
-			strpageno = re.match('\D+(\d+)', str(page)).group(1)
-			article_pageno = int(strpageno)
-			print '\tPage', article_pageno
-
-			# Walk until we find a summary
-			summary = page.findNext('blockquote', text=re.compile('Summary'))
-			if summary is None:
-				article_summary = None
-			else:
-				summary = summary.next
-				article_summary = re.sub('(\<br\s*/?\>|\n|\s{2,})', '', summary)
-
-			if article_summary is None:
+			pageno, summary, text = self.__parsePage(page)
+			if pageno is None:
+				# Bad page
 				continue
-
-			# Look for full text associated with summary
-			# TODO do all articles have a summary?
-			text = page.findNext('blockquote', text=re.compile('.*(Full Text).*(Summary)?'))
-			if text is None:
-				article_text = None
-			else:
-				# Join the contents as strings
-				# TODO remove line breaks here?
-				article_text = ''.join(map(lambda x: str(x), text.findNext('p').contents))
-				article_text = re.sub('(\<br\s*/?\>|\n|\s{2,})', '', article_text)
 
 			# Add article to xml tree
 			article = xml.createElement('article')
 			article.appendChild(super(ValleyScraper, self) \
-				.createTextNode('page', str(article_pageno)))
+				.createTextNode('page', str(pageno)))
 			article.appendChild(super(ValleyScraper, self) \
-				.createTextNode('summary', article_summary))
+				.createTextNode('summary', summary))
 			article.appendChild(super(ValleyScraper, self) \
-				.createTextNode('text', str(article_text)))
+				.createTextNode('text', str(text)))
 			articles.appendChild(article)
 
 
@@ -142,3 +116,37 @@ class ValleyScraper(BaseScraper):
 		super(ValleyScraper, self).writeXml(path, xml)
 
 		return True
+
+	def __parsePage(self, page):
+		"""Parses articles from a page"""
+
+		# TODO parse multiple articles per page
+
+		# Grab page number - (probably not necessary, but sometimes pages are skipped)
+		strpageno = re.match('\D+(\d+)', str(page)).group(1)
+		pageno = int(strpageno)
+		print '\tPage', pageno
+
+		# Walk until we find a summary
+		summary = page.findNext('blockquote', text=re.compile('Summary'))
+		if summary is None:
+			summary = None
+		else:
+			summary = summary.next
+			summary = re.sub('(\<br\s*/?\>|\n|\s{2,})', '', summary)
+
+		if summary is None:
+			return None, None, None
+
+		# Look for full text associated with summary
+		# TODO do all articles have a summary?
+		text = page.findNext('blockquote', text=re.compile('.*(Full Text).*(Summary)?'))
+		if text is None:
+			text = None
+		else:
+			# Join the contents as strings
+			# TODO remove line breaks here?
+			text = ''.join(map(lambda x: str(x), text.findNext('p').contents))
+			text = re.sub('(\<br\s*/?\>|\n|\s{2,})', '', text)
+
+		return pageno, summary, text
