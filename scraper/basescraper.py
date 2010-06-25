@@ -33,14 +33,14 @@ class BaseScraper(object):
                 """Run scraper"""
                 return
 
-        def __createTextNode(self,name,text):
+        def createTextNode(self,name,text):
 		"""Create an XML node containing text"""
                 xml = minidom.Document()
                 e = xml.createElement(name)
                 e.appendChild(xml.createTextNode(text))
                 return e
 
-	def __writeXml(self, path, xml):
+	def writeXml(self, path, xml):
                 """Write XML doc to file"""
 		print 'Writing to', path
                 dirpath = os.path.dirname(path)

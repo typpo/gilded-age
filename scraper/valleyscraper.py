@@ -81,9 +81,9 @@ class ValleyScraper(BaseScraper):
 
 		# Add metadata
                 meta = xml.createElement('meta')
-                meta.appendChild(super(ValleyScraper, self).__createNode('newspaper', paper))
-                meta.appendChild(super(ValleyScraper, self).__createNode('alignment', source['alignment']))
-                meta.appendChild(super(ValleyScraper, self).__createNode('date', article_date))
+                meta.appendChild(super(ValleyScraper, self).createTextNode('newspaper', source['name']))
+                meta.appendChild(super(ValleyScraper, self).createTextNode('alignment', source['alignment']))
+                meta.appendChild(super(ValleyScraper, self).createTextNode('date', article_date))
 
 		# Create articles node
 		articles = xml.createElement('articles')
@@ -119,9 +119,9 @@ class ValleyScraper(BaseScraper):
 
 			# Add article to xml tree
 			article = xml.createElement('article')
-			article.appendChild(super(ValleyScraper, self).__createNode('page', article_pageno))
-			article.appendChild(super(ValleyScraper, self).__createNode('summary', article_summary))
-			article.appendChild(super(ValleyScraper, self).__createNode('text', article_text))
+			article.appendChild(super(ValleyScraper, self).createTextNode('page', article_pageno))
+			article.appendChild(super(ValleyScraper, self).createTextNode('summary', article_summary))
+			article.appendChild(super(ValleyScraper, self).createTextNode('text', article_text))
 			articles.appendChild(article)
 
 
@@ -132,6 +132,6 @@ class ValleyScraper(BaseScraper):
 		# And write it to file
                 path = os.path.join(constants.BASE_DIR, \
                         constants.VALLEY_DIR, tag)
-		super(ValleyScraper, self).__writeXml(path, xml)
+		super(ValleyScraper, self).writeXml(path, xml)
 
 		return True
