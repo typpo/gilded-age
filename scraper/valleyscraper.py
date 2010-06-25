@@ -68,11 +68,14 @@ class ValleyScraper(BaseScraper):
 
 		# Search for section-head class
 		sectionhead = soup.find('h2', 'section-head')
+		if sectionhead is None:
+			# Bad page
+			return False
 
 		# Extract date
-		strdate = re.match('^.*: ([^<]+)', str(sectionhead)).group(1)
-		article_date = time.strptime(strdate, '%B %d, %Y')
-		print '\tDated', strdate
+		article_strdate = re.match('^.*: ([^<]+)', str(sectionhead)).group(1)
+		article_date = time.strptime(article_strdate, '%B %d, %Y')
+		print '\tDated', article_strdate
 
                 # Create XML tree.
                 xml = minidom.Document()
@@ -83,7 +86,7 @@ class ValleyScraper(BaseScraper):
                 meta = xml.createElement('meta')
                 meta.appendChild(super(ValleyScraper, self).createTextNode('newspaper', source['name']))
                 meta.appendChild(super(ValleyScraper, self).createTextNode('alignment', source['alignment']))
-                meta.appendChild(super(ValleyScraper, self).createTextNode('date', article_date))
+                meta.appendChild(super(ValleyScraper, self).createTextNode('date', article_strdate))
 
 		# Create articles node
 		articles = xml.createElement('articles')
@@ -105,7 +108,7 @@ class ValleyScraper(BaseScraper):
 				article_summary = re.sub('(\<br\s*/?\>|\n|\s{2,})', '', summary)
 
 			if article_summary is None:
-				return False
+				continue
 
 			# Look for full text associated with summary
 			# TODO do all articles have a summary?
@@ -113,15 +116,19 @@ class ValleyScraper(BaseScraper):
 			if text is None:
 				article_text = None
 			else:
-				article_text = str(''.join(text.findNext('p').contents))
+				# Join the contents as strings
+				# TODO remove line breaks here?
+				article_text = ''.join(map(lambda x: str(x), text.findNext('p').contents))
 				article_text = re.sub('(\<br\s*/?\>|\n|\s{2,})', '', article_text)
-				print article_text
 
 			# Add article to xml tree
 			article = xml.createElement('article')
-			article.appendChild(super(ValleyScraper, self).createTextNode('page', article_pageno))
-			article.appendChild(super(ValleyScraper, self).createTextNode('summary', article_summary))
-			article.appendChild(super(ValleyScraper, self).createTextNode('text', article_text))
+			article.appendChild(super(ValleyScraper, self) \
+				.createTextNode('page', str(article_pageno)))
+			article.appendChild(super(ValleyScraper, self) \
+				.createTextNode('summary', article_summary))
+			article.appendChild(super(ValleyScraper, self) \
+				.createTextNode('text', str(article_text)))
 			articles.appendChild(article)
 
 

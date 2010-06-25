@@ -1,4 +1,6 @@
+import os
 import abc
+from xml.dom import minidom
 from ConfigParser import ConfigParser
 
 class BaseScraper(object):
