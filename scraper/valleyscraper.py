@@ -22,16 +22,25 @@ class ValleyScraper(BaseScraper):
         def execute(self):
                 """Loads urls in config files"""
                 sources = super(ValleyScraper, self).parseConfig(constants.VALLEY_CONFIG)
+		total = 0
                 for source in sources:
 			c, extracted = self.extractLinks(source['url'])
+			if c == -1:
+				continue
+			total += c
 			for link, tag in extracted:
 				self.parse(link, tag, source)
 
-                print 'Found', len(links), 'newspapers total'
+                print 'Found', total, 'newspapers total'
 
         def extractLinks(self,base):
                 """Extract all links that end in .xml"""
-                src = urllib.urlopen(base).read()
+		try:
+			src = urllib.urlopen(base).read()
+		except:
+			print 'Unable to read', base
+			return -1, None
+
                 soup = BeautifulSoup(src)
 
                 tags = soup.findAll('a', href=re.compile("\.xml$"))
@@ -90,20 +99,21 @@ class ValleyScraper(BaseScraper):
 
 		# Loop through pages
 		for page in soup.findAll('p', 'title'):
-			pageno, summary, text = self.__parsePage(page)
+			pageno, extracted_articles = self.__parsePage(page)
 			if pageno is None:
 				# Bad page
 				continue
 
 			# Add article to xml tree
-			article = xml.createElement('article')
-			article.appendChild(super(ValleyScraper, self) \
-				.createTextNode('page', str(pageno)))
-			article.appendChild(super(ValleyScraper, self) \
-				.createTextNode('summary', summary))
-			article.appendChild(super(ValleyScraper, self) \
-				.createTextNode('text', str(text)))
-			articles.appendChild(article)
+			for summary, text in extracted_articles:
+				article = xml.createElement('article')
+				article.appendChild(super(ValleyScraper, self) \
+					.createTextNode('page', str(pageno)))
+				article.appendChild(super(ValleyScraper, self) \
+					.createTextNode('summary', summary))
+				article.appendChild(super(ValleyScraper, self) \
+					.createTextNode('text', str(text)))
+				articles.appendChild(article)
 
 
 		# Finish off XML tree
@@ -127,26 +137,32 @@ class ValleyScraper(BaseScraper):
 		pageno = int(strpageno)
 		print '\tPage', pageno
 
-		# Walk until we find a summary
-		summary = page.findNext('blockquote', text=re.compile('Summary'))
-		if summary is None:
-			summary = None
-		else:
-			summary = summary.next
-			summary = re.sub('(\<br\s*/?\>|\n|\s{2,})', '', summary)
+		# Set up return list - holds summary and article text for each article
+		returnvals = []
 
-		if summary is None:
-			return None, None, None
+		while True:
+			# Walk until we find a summary - constain so we don't overflow onto next page
+			# TODO clean this regex
+			summary = page.findNext('blockquote', text=re.compile('(Summary).*(-Page )'))
+			if summary is None:
+				# We've reached the end of the page
+				print '\tReached end of page'
+				return pageno, returnvals
 
-		# Look for full text associated with summary
-		# TODO do all articles have a summary?
-		text = page.findNext('blockquote', text=re.compile('.*(Full Text).*(Summary)?'))
-		if text is None:
-			text = None
-		else:
-			# Join the contents as strings
-			# TODO remove line breaks here?
-			text = ''.join(map(lambda x: str(x), text.findNext('p').contents))
-			text = re.sub('(\<br\s*/?\>|\n|\s{2,})', '', text)
+			else:
+				summary = summary.next
+				summary = re.sub('(\<br\s*/?\>|\n|\s{2,})', '', summary)
 
-		return pageno, summary, text
+			# Look for full text associated with summary
+			# TODO do all articles have a summary?
+			# TODO clean this regex
+			text = page.findNext('blockquote', text=re.compile('.*(Full Text).*(Summary)?'))
+			if text is None:
+				text = None
+			else:
+				# Join the contents as strings
+				# TODO remove line breaks here?
+				text = ''.join(map(lambda x: str(x), text.findNext('p').contents))
+				text = re.sub('(\<br\s*/?\>|\n|\s{2,})', '', text)
+
+			returnvals.append((summary, text))
