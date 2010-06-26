@@ -2,8 +2,6 @@ from scraper.valleyscraper import ValleyScraper
 from pysqlite2 import dbapi2 as sqlite
 import constants
 
-ENABLED_SCRAPERS = ['VALLEY_SCRAPER']
-
 def createTable(cur):
         cur.execute("""
                CREATE TABLE IF NOT EXISTS articles
@@ -33,8 +31,9 @@ def main():
         print len(cur.fetchall()), 'articles in db at', constants.DB_FILE
 
         # Run scrapers...
-        vs = ValleyScraper(conn)
-        vs.execute()
+	if 'VALLEY' in constants.ENABLED_SCRAPERS:
+		vs = ValleyScraper(conn)
+		vs.execute()
         
 
 if __name__ == "__main__":
