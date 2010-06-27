@@ -12,3 +12,7 @@ ENABLED_SCRAPERS = ['VALLEY']
 # Valley consts
 VALLEY_CONFIG = 'valley.cfg'
 VALLEY_DIR = 'valley'
+
+"""
+Analyzer constants
+"""

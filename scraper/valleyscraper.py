@@ -93,14 +93,19 @@ class ValleyScraper(BaseScraper):
                 meta.appendChild(super(ValleyScraper, self).createTextNode('newspaper', source['name']))
                 meta.appendChild(super(ValleyScraper, self).createTextNode('alignment', source['alignment']))
                 meta.appendChild(super(ValleyScraper, self).createTextNode('date', article_strdate))
+                meta.appendChild(super(ValleyScraper, self).createTextNode('url', link))
 
 		# Create articles node
 		articles = xml.createElement('articles')
 
 		# Loop through pages
-		for page in soup.findAll('p', 'title'):
-			pageno, extracted_articles = self.__parsePage(page)
-			if pageno is None:
+                pageno = 0 
+                for page in src.split('<p class="title">')[1:]:
+                        pageno += 1
+                        
+                        print '\tPage', pageno
+			extracted_articles = self.__parsePage(page)
+			if pageno is -1 or extracted_articles is None:
 				# Bad page
 				continue
 
@@ -127,42 +132,39 @@ class ValleyScraper(BaseScraper):
 
 		return True
 
-	def __parsePage(self, page):
+	def __parsePage(self, pagesrc):
 		"""Parses articles from a page"""
-
-		# TODO parse multiple articles per page
-
-		# Grab page number - (probably not necessary, but sometimes pages are skipped)
-		strpageno = re.match('\D+(\d+)', str(page)).group(1)
-		pageno = int(strpageno)
-		print '\tPage', pageno
+                # TODO verify that all articles have a summary?
 
 		# Set up return list - holds summary and article text for each article
 		returnvals = []
 
-		while True:
-			# Walk until we find a summary - constain so we don't overflow onto next page
-			# TODO clean this regex
-			summary = page.findNext('blockquote', text=re.compile('(Summary).*(-Page )'))
-			if summary is None:
-				# We've reached the end of the page
-				print '\tReached end of page'
-				return pageno, returnvals
+                # Walk until we find a summary
+                page = BeautifulSoup(pagesrc)
+                summaries = page.findAll('blockquote', text=re.compile('Summary'))
+                if summaries is None or len(summaries) < 1:
+                        print '\t\tNo summaries found'
+                        return None
 
-			else:
-				summary = summary.next
-				summary = re.sub('(\<br\s*/?\>|\n|\s{2,})', '', summary)
+                # Loop through article summaries and record them
+                articlecount = 1 
+                print '\tGrabbing', len(summaries), 'articles'
+                for summary in summaries:
+                        # Grab summary text
+                        summary_next = summary.next
+                        summary_text = re.sub('(\<br\s*/?\>|\n|\s{2,})', '', summary_next)
 
-			# Look for full text associated with summary
-			# TODO do all articles have a summary?
-			# TODO clean this regex
-			text = page.findNext('blockquote', text=re.compile('.*(Full Text).*(Summary)?'))
-			if text is None:
-				text = None
-			else:
-				# Join the contents as strings
-				# TODO remove line breaks here?
-				text = ''.join(map(lambda x: str(x), text.findNext('p').contents))
-				text = re.sub('(\<br\s*/?\>|\n|\s{2,})', '', text)
+                        # Look for full text associated with summary
+                        full = summary_next.findNext('blockquote', text=re.compile('^(Summary).*?(Full Text)'))
+                        if full is None:
+                                full_text = None
+                        else:
+                                # Join the contents as strings
+                                # TODO replace quotes
+                                full_text = ' '.join(map(lambda x: str(x), full.findNext('p').contents))
+                                full_text = re.sub('(\<br\s*/?\>|\s{2,})', ' ', full_text)
 
-			returnvals.append((summary, text))
+                        returnvals.append((summary_text, full_text))
+                        articlecount += 1
+
+                return returnvals
