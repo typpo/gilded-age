@@ -68,20 +68,15 @@ class ValleyScraper(BaseScraper):
                 src = urllib.urlopen(link).read()
                 soup = BeautifulSoup(src)
 
-		# Parse date
-		# Formatted:
-		# Newspaper Name: August 5, 1859
-
 		# Search for section-head class
 		sectionhead = soup.find('h2', 'section-head')
 		if sectionhead is None:
 			# Bad page
 			return False
 
-		# Extract date
+		# Extract date, formatted: 'Newspaper Name: August 5, 1859'
 		article_strdate = re.match('^.*: ([^<]+)', str(sectionhead)).group(1)
 		article_date = time.strptime(article_strdate, '%B %d, %Y')
-		print '\tDated', article_strdate
 
                 # Create XML tree.
                 xml = minidom.Document()
@@ -94,8 +89,8 @@ class ValleyScraper(BaseScraper):
                 meta.appendChild(super(ValleyScraper, self).createTextNode('alignment', source['alignment']))
                 meta.appendChild(super(ValleyScraper, self).createTextNode('date', article_strdate))
                 meta.appendChild(super(ValleyScraper, self).createTextNode('url', link))
-
-		# Create articles node
+		
+                # Create articles node
 		articles = xml.createElement('articles')
 
 		# Loop through pages
@@ -103,7 +98,6 @@ class ValleyScraper(BaseScraper):
                 for page in src.split('<p class="title">')[1:]:
                         pageno += 1
                         
-                        print '\tPage', pageno
 			extracted_articles = self.__parsePage(page)
 			if pageno is -1 or extracted_articles is None:
 				# Bad page
@@ -148,7 +142,6 @@ class ValleyScraper(BaseScraper):
 
                 # Loop through article summaries and record them
                 articlecount = 1 
-                print '\tGrabbing', len(summaries), 'articles'
                 for summary in summaries:
                         # Grab summary text
                         summary_next = summary.next
@@ -163,12 +156,13 @@ class ValleyScraper(BaseScraper):
                                 paras = full.findAllNext('p')
 
                                 # Flatten paragraph list and convert everything to a string
-                                # TODO preserve paragraph breaks?
+                                # TODO preserve paragraph breaks
                                 full_text = ' '.join(
                                         map(lambda part: str(part),
                                             (part for para in paras for part in para)
                                         ))
 
+                                # Clean it up
                                 full_text = re.sub('(\<br\s*/?\>|\s{2,})', ' ', full_text)
 
                         returnvals.append((summary_text, full_text))
