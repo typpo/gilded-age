@@ -155,13 +155,20 @@ class ValleyScraper(BaseScraper):
                         summary_text = re.sub('(\<br\s*/?\>|\n|\s{2,})', '', summary_next)
 
                         # Look for full text associated with summary
-                        full = summary_next.findNext('blockquote', text=re.compile('^(Summary).*?(Full Text)'))
-                        if full is None:
+                        full = summary_next.findNext('blockquote', text=re.compile('(Summary|Full Text)'))
+                        if full is None or str(full).find('Summary') > -1:
                                 full_text = None
                         else:
-                                # Join the contents as strings
-                                # TODO replace quotes
-                                full_text = ' '.join(map(lambda x: str(x), full.findNext('p').contents))
+                                # Get paragraphs
+                                paras = full.findAllNext('p')
+
+                                # Flatten paragraph list and convert everything to a string
+                                # TODO preserve paragraph breaks?
+                                full_text = ' '.join(
+                                        map(lambda part: str(part),
+                                            (part for para in paras for part in para)
+                                        ))
+
                                 full_text = re.sub('(\<br\s*/?\>|\s{2,})', ' ', full_text)
 
                         returnvals.append((summary_text, full_text))
