@@ -105,10 +105,12 @@ class ValleyScraper(BaseScraper):
 				continue
 
 			# Add article to xml tree
-			for summary, text in extracted_articles:
+			for title, summary, text in extracted_articles:
 				article = xml.createElement('article')
 				article.appendChild(super(ValleyScraper, self) \
 					.createTextNode('page', str(pageno)))
+				article.appendChild(super(ValleyScraper, self) \
+					.createTextNode('title', title))
 				article.appendChild(super(ValleyScraper, self) \
 					.createTextNode('summary', summary))
 				article.appendChild(super(ValleyScraper, self) \
@@ -144,6 +146,10 @@ class ValleyScraper(BaseScraper):
                 # Loop through article summaries and record them
                 articlecount = 1 
                 for summary in summaries:
+                        # Get title
+                        title = summary.findPrevious('b')
+                        title_text = title.contents[0]
+
                         # Grab summary text
                         summary_next = summary.next
                         summary_text = re.sub('(\<br\s*/?\>|\n|\s{2,})', '', summary_next)
@@ -166,7 +172,7 @@ class ValleyScraper(BaseScraper):
                                 # Clean it up
                                 full_text = re.sub('(\<br\s*/?\>|\s{2,})', ' ', full_text)
 
-                        returnvals.append((summary_text, full_text))
+                        returnvals.append((title_text, summary_text, full_text))
                         articlecount += 1
 
                 return returnvals
