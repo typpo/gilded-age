@@ -35,6 +35,12 @@ class BaseScraper(object):
                 """Run scraper"""
                 return
 
+        def toDb(self, args):
+                execute = "INSERT INTO articles VALUES (null, ?, ?, ?, ?, ?, ?, ?, date(?), datetime('now','localtime'))"
+
+                self.cur.execute(execute, args)
+                self.conn.commit()
+
         def createTextNode(self,name,text):
 		"""Create an XML node containing text"""
                 xml = minidom.Document()

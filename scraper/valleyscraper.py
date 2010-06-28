@@ -116,6 +116,18 @@ class ValleyScraper(BaseScraper):
 				article.appendChild(super(ValleyScraper, self) \
 					.createTextNode('text', str(text)))
 				articles.appendChild(article)
+
+                                # Write to db
+                                args = (source['name'], \
+                                     source['alignment'], \
+                                     pageno, \
+                                     title, \
+                                     summary, \
+                                     text, \
+                                     link, \
+                                     article_strdate,)
+
+                                super(ValleyScraper, self).toDb(args)
                 print
 
 
@@ -123,7 +135,7 @@ class ValleyScraper(BaseScraper):
                 root.appendChild(meta)
                 root.appendChild(articles)
 
-		# And write it to file
+		# Write to file
                 path = os.path.join(constants.BASE_DIR, \
                         constants.VALLEY_DIR, tag)
 		super(ValleyScraper, self).writeXml(path, xml)

@@ -7,9 +7,12 @@ def createTable(cur):
                CREATE TABLE IF NOT EXISTS articles
                     (id INTEGER PRIMARY KEY,
                     source TEXT,
+                    alignment TEXT,
+                    page INTEGER,
                     title TEXT,
                     summary TEXT,
                     text TEXT,
+                    url TEXT,
                     articleDate DATE,
                     timeEnter DATE)
                 """)
@@ -17,7 +20,7 @@ def createTable(cur):
 def insertTest(cur):
         cur.execute("""
                 INSERT INTO articles VALUES (
-                    null, 'src', 'twat', 'twot', 'twatwatwatwat', date('1989-12-26'), datetime('now','localtime')
+                    null, 'src', 'alignment', 1, 'title', 'summary', 'text', date('1989-12-26'), datetime('now','localtime')
                 )
         """)
 
