@@ -97,6 +97,7 @@ class ValleyScraper(BaseScraper):
                 pageno = 0 
                 for page in src.split('<p class="title">')[1:]:
                         pageno += 1
+                        print '\tPage', pageno,
                         
 			extracted_articles = self.__parsePage(page)
 			if pageno is -1 or extracted_articles is None:
@@ -113,6 +114,7 @@ class ValleyScraper(BaseScraper):
 				article.appendChild(super(ValleyScraper, self) \
 					.createTextNode('text', str(text)))
 				articles.appendChild(article)
+                print
 
 
 		# Finish off XML tree
@@ -137,7 +139,6 @@ class ValleyScraper(BaseScraper):
                 page = BeautifulSoup(pagesrc)
                 summaries = page.findAll('blockquote', text=re.compile('Summary'))
                 if summaries is None or len(summaries) < 1:
-                        print '\t\tNo summaries found'
                         return None
 
                 # Loop through article summaries and record them
