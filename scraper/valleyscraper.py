@@ -1,3 +1,4 @@
+from BeautifulSoup import BeautifulStoneSoup
 from BeautifulSoup import BeautifulSoup
 from ConfigParser import ConfigParser
 from basescraper import BaseScraper
@@ -29,7 +30,7 @@ class ValleyScraper(BaseScraper):
 				continue
 			total += c
 			for link, tag in extracted:
-				self.parse(link, tag, source)
+                                self.parse(link, tag, source)
 
                 print 'Found', total, 'newspapers total'
 
@@ -66,7 +67,8 @@ class ValleyScraper(BaseScraper):
                 # Parse.
 		print 'Loading', link
                 src = urllib.urlopen(link).read()
-                soup = BeautifulSoup(src)
+                soup = BeautifulStoneSoup(src, \
+                        convertEntities=BeautifulStoneSoup.HTML_ENTITIES)
 
 		# Search for section-head class
 		sectionhead = soup.find('h2', 'section-head')
@@ -75,8 +77,10 @@ class ValleyScraper(BaseScraper):
 			return False
 
 		# Extract date, formatted: 'Newspaper Name: August 5, 1859'
-		article_strdate = re.match('^.*: ([^<]+)', str(sectionhead)).group(1)
-		article_date = time.strptime(article_strdate, '%B %d, %Y')
+		strdate = re.match('^.*: ([^<]+)', str(sectionhead)).group(1)
+		date = time.strptime(strdate, '%B %d, %Y')
+                strdate = '%d-%02d-%02d' % \
+                        (date.tm_year, date.tm_mon, date.tm_mday)
 
                 # Create XML tree.
                 xml = minidom.Document()
@@ -87,7 +91,7 @@ class ValleyScraper(BaseScraper):
                 meta = xml.createElement('meta')
                 meta.appendChild(super(ValleyScraper, self).createTextNode('newspaper', source['name']))
                 meta.appendChild(super(ValleyScraper, self).createTextNode('alignment', source['alignment']))
-                meta.appendChild(super(ValleyScraper, self).createTextNode('date', article_strdate))
+                meta.appendChild(super(ValleyScraper, self).createTextNode('date', strdate))
                 meta.appendChild(super(ValleyScraper, self).createTextNode('url', link))
 		
                 # Create articles node
@@ -97,7 +101,6 @@ class ValleyScraper(BaseScraper):
                 pageno = 0 
                 for page in src.split('<p class="title">')[1:]:
                         pageno += 1
-                        print '\tPage', pageno,
                         
 			extracted_articles = self.__parsePage(page)
 			if pageno is -1 or extracted_articles is None:
@@ -125,7 +128,7 @@ class ValleyScraper(BaseScraper):
                                      summary, \
                                      text, \
                                      link, \
-                                     article_strdate,)
+                                     strdate,)
 
                                 super(ValleyScraper, self).toDb(args)
                 print
@@ -164,7 +167,8 @@ class ValleyScraper(BaseScraper):
 
                         # Grab summary text
                         summary_next = summary.next
-                        summary_text = re.sub('(\<br\s*/?\>|\n|\s{2,})', '', summary_next)
+                        summary_text = ' '.join(map(lambda part: str(part), summary_next))
+                        summary_text = re.sub('(\<br\s*/?\>|\s{2,})', '', summary_text)
 
                         # Look for full text associated with summary
                         full = summary_next.findNext('blockquote', text=re.compile('(Summary|Full Text)'))

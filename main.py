@@ -20,7 +20,7 @@ def createTable(cur):
 def insertTest(cur):
         cur.execute("""
                 INSERT INTO articles VALUES (
-                    null, 'src', 'alignment', 1, 'title', 'summary', 'text', date('1989-12-26'), datetime('now','localtime')
+                    null, 'src', 'alignment', 1, 'title', 'summary', 'text', 'http://', date('1889-12-26'), datetime('now','localtime')
                 )
         """)
 

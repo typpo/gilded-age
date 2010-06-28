@@ -36,7 +36,7 @@ class BaseScraper(object):
                 return
 
         def toDb(self, args):
-                execute = "INSERT INTO articles VALUES (null, ?, ?, ?, ?, ?, ?, ?, date(?), datetime('now','localtime'))"
+                execute = "INSERT INTO articles VALUES (null, ?, ?, ?, ?, ?, ?, ?, datetime(?), datetime('now','localtime'))"
 
                 self.cur.execute(execute, args)
                 self.conn.commit()
