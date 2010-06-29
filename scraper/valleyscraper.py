@@ -63,10 +63,19 @@ class ValleyScraper(BaseScraper):
 
 		return -- True if successful, False otherwise
 		"""
+                path = os.path.join(constants.BASE_DIR, \
+                        constants.VALLEY_DIR, tag)
+                if os.path.exists(path):
+                        # Already parsed
+                        return False
 
                 # Parse.
 		print 'Loading', link
-                src = urllib.urlopen(link).read()
+                try:
+                        src = urllib.urlopen(link).read()
+                except IOError:
+                        return False
+
                 soup = BeautifulStoneSoup(src, \
                         convertEntities=BeautifulStoneSoup.HTML_ENTITIES)
 
@@ -77,7 +86,7 @@ class ValleyScraper(BaseScraper):
 			return False
 
 		# Extract date, formatted: 'Newspaper Name: August 5, 1859'
-		strdate = re.match('^.*: ([^<]+)', str(sectionhead)).group(1)
+		strdate = re.match('^.*: ([^<]+)', unicode(sectionhead)).group(1)
 		date = time.strptime(strdate, '%B %d, %Y')
                 strdate = '%d-%02d-%02d' % \
                         (date.tm_year, date.tm_mon, date.tm_mday)
@@ -117,7 +126,7 @@ class ValleyScraper(BaseScraper):
 				article.appendChild(super(ValleyScraper, self) \
 					.createTextNode('summary', summary))
 				article.appendChild(super(ValleyScraper, self) \
-					.createTextNode('text', str(text)))
+					.createTextNode('text', unicode(text)))
 				articles.appendChild(article)
 
                                 # Write to db
@@ -139,8 +148,6 @@ class ValleyScraper(BaseScraper):
                 root.appendChild(articles)
 
 		# Write to file
-                path = os.path.join(constants.BASE_DIR, \
-                        constants.VALLEY_DIR, tag)
 		super(ValleyScraper, self).writeXml(path, xml)
 
 		return True
@@ -167,13 +174,13 @@ class ValleyScraper(BaseScraper):
 
                         # Grab summary text
                         summary_next = summary.next
-                        summary_text = ' '.join(map(lambda part: str(part), summary_next))
+                        summary_text = ' '.join(map(lambda part: unicode(part), summary_next))
                         summary_text = re.sub('(\<br\s*/?\>|\s{2,})', '', summary_text)
 
                         # Look for full text associated with summary
                         full = summary_next.findNext('blockquote', text=re.compile('(Summary|Full Text)'))
-                        if full is None or str(full).find('Summary') > -1:
-                                full_text = None
+                        if full is None or unicode(full).find('Summary') > -1:
+                                full_text = unicode(None)
                         else:
                                 # Get paragraphs
                                 paras = full.findAllNext('p')
@@ -181,7 +188,7 @@ class ValleyScraper(BaseScraper):
                                 # Flatten paragraph list and convert everything to a string
                                 # TODO preserve paragraph breaks
                                 full_text = ' '.join(
-                                        map(lambda part: str(part),
+                                        map(lambda part: unicode(part),
                                             (part for para in paras for part in para)
                                         ))
 

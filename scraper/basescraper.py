@@ -55,4 +55,4 @@ class BaseScraper(object):
                 if not os.path.isdir(dirpath):
                         os.makedirs(dirpath)
                 f = open(path, 'w')
-                xml.writexml(f,'\t','\t','\n','UTF-8')
+                xml.writexml(f,'\t','\t','\n', "utf-8")
