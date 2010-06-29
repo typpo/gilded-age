@@ -31,9 +31,9 @@ def main():
         createTable(cur)
         conn.commit()
 
-        cur.execute('SELECT * FROM articles WHERE summary LIKE "R o c k i n g h a m"')
+        cur.execute('SELECT * FROM articles')
         print len(cur.fetchall()), 'articles in db at', constants.DB_FILE
-        return
+
         # Run scrapers...
 	if 'VALLEY' in constants.ENABLED_SCRAPERS:
 		vs = ValleyScraper(conn)

@@ -2,6 +2,7 @@ from BeautifulSoup import BeautifulStoneSoup
 from BeautifulSoup import BeautifulSoup
 from ConfigParser import ConfigParser
 from basescraper import BaseScraper
+from utils import asciiDamnit
 from xml.dom import minidom
 import constants
 import abc
@@ -88,7 +89,7 @@ class ValleyScraper(BaseScraper):
 		# Extract date, formatted: 'Newspaper Name: August 5, 1859'
                 try:
                         strdate = re.match('^.*?:\s+(.*?\s\d{1,2},\s+\d{4})', \
-                                unicode(sectionhead)).group(1)
+                                str(sectionhead)).group(1)
                         try:
                                 date = time.strptime(strdate, '%B %d, %Y')
                         except ValueError:
@@ -97,7 +98,7 @@ class ValleyScraper(BaseScraper):
                 except:
                         print 'Couldn\'t parse date'
                         strdate = raw_input('Enter date (mm/dd/yyyy) for: %s\n> ' \
-                                % (unicode(sectionhead.contents[0])))
+                                % (sectionhead.contents[0]))
                         date = time.strptime(strdate, '%m/%d/%Y')
 
                         
@@ -130,8 +131,8 @@ class ValleyScraper(BaseScraper):
 				# Bad page
 				continue
 
-			# Add article to xml tree
 			for title, summary, text in extracted_articles:
+                                # Add article to xml tree
 				article = xml.createElement('article')
 				article.appendChild(super(ValleyScraper, self) \
 					.createTextNode('page', str(pageno)))
@@ -186,13 +187,13 @@ class ValleyScraper(BaseScraper):
 
                         # Grab summary text
                         summary_next = summary.next
-                        summary_text = ' '.join(map(lambda part: unicode(part), summary_next))
-                        summary_text = re.sub('(\<br\s*/?\>|\s{2,})', '', summary_text)
+                        summary_text = ''.join(map(lambda part: unicode(part), summary_next))
+                        summary_text = re.sub('(\<br\s*/?\>|\s{2,})', ' ', summary_text)
 
                         # Look for full text associated with summary
                         full = summary_next.findNext('blockquote', text=re.compile('(Summary|Full Text)'))
                         if full is None or unicode(full).find('Summary') > -1:
-                                full_text = unicode(None)
+                                full_text = None
                         else:
                                 # Get paragraphs
                                 paras = full.findAllNext('p')
@@ -207,6 +208,11 @@ class ValleyScraper(BaseScraper):
                                 # Clean it up
                                 full_text = re.sub('(\<br\s*/?\>|\s{2,})', ' ', full_text)
 
+                        # Make sure it's ASCII
+                        title_text = asciiDamnit(unicode(title_text))
+                        summary_text = asciiDamnit(unicode(summary_text))
+                        full_text = 'None' if full_text is None else \
+                                asciiDamnit(unicode(full_text))
                         returnvals.append((title_text, summary_text, full_text))
                         articlecount += 1
 
