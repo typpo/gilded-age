@@ -140,7 +140,7 @@ class ValleyScraper(BaseScraper):
 				article.appendChild(super(ValleyScraper, self) \
 					.createTextNode('summary', summary))
 				article.appendChild(super(ValleyScraper, self) \
-					.createTextNode('text', unicode(text)))
+					.createTextNode('text', text))
 				articles.appendChild(article)
 
                                 # Write to db

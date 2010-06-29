@@ -45,7 +45,7 @@ class BaseScraper(object):
 		"""Create an XML node containing text"""
                 xml = minidom.Document()
                 e = xml.createElement(name)
-                e.appendChild(xml.createTextNode(text))
+                e.appendChild(xml.createTextNode(unicode(text)))
                 return e
 
 	def writeXml(self, path, xml):
@@ -54,4 +54,4 @@ class BaseScraper(object):
                 if not os.path.isdir(dirpath):
                         os.makedirs(dirpath)
                 f = open(path, 'w')
-                xml.writexml(f,'\t','\t','\n', "utf-8")
+                xml.writexml(f,'\t','\t','\n', 'utf-8')
