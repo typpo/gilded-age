@@ -86,8 +86,13 @@ class ValleyScraper(BaseScraper):
 			return False
 
 		# Extract date, formatted: 'Newspaper Name: August 5, 1859'
-		strdate = re.match('^.*: ([^<]+)', unicode(sectionhead)).group(1)
-		date = time.strptime(strdate, '%B %d, %Y')
+                strdate = re.match('^.*?:\s+(.*?\s\d{1,2},\s+\d{4})', unicode(sectionhead)).group(1)
+                try:
+                        date = time.strptime(strdate, '%B %d, %Y')
+                except ValueError:
+                        # month # instead of name
+                        date = time.strptime(strdate, '%m %d, %Y')
+
                 strdate = '%d-%02d-%02d' % \
                         (date.tm_year, date.tm_mon, date.tm_mday)
 
