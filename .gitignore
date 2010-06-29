@@ -2,5 +2,6 @@
 *.db
 *.swp
 output/*
+!output/clean
 mirrors/*
 !mirrors/spider
