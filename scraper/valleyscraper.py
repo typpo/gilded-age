@@ -86,12 +86,21 @@ class ValleyScraper(BaseScraper):
 			return False
 
 		# Extract date, formatted: 'Newspaper Name: August 5, 1859'
-                strdate = re.match('^.*?:\s+(.*?\s\d{1,2},\s+\d{4})', unicode(sectionhead)).group(1)
                 try:
-                        date = time.strptime(strdate, '%B %d, %Y')
-                except ValueError:
-                        # month # instead of name
-                        date = time.strptime(strdate, '%m %d, %Y')
+                        strdate = re.match('^.*?:\s+(.*?\s\d{1,2},\s+\d{4})', \
+                                unicode(sectionhead)).group(1)
+                        try:
+                                date = time.strptime(strdate, '%B %d, %Y')
+                        except ValueError:
+                                # month # instead of name
+                                        date = time.strptime(strdate, '%m %d, %Y')
+                except:
+                        print 'Couldn\'t parse date'
+                        strdate = raw_input('Enter date (mm/dd/yyyy) for: %s\n> ' \
+                                % (unicode(sectionhead.contents[0])))
+                        date = time.strptime(strdate, '%m/%d/%Y')
+
+                        
 
                 strdate = '%d-%02d-%02d' % \
                         (date.tm_year, date.tm_mon, date.tm_mday)
@@ -145,8 +154,6 @@ class ValleyScraper(BaseScraper):
                                      strdate,)
 
                                 super(ValleyScraper, self).toDb(args)
-                print
-
 
 		# Finish off XML tree
                 root.appendChild(meta)

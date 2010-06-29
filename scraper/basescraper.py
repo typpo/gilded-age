@@ -50,7 +50,6 @@ class BaseScraper(object):
 
 	def writeXml(self, path, xml):
                 """Write XML doc to file"""
-		print 'Writing to', path
                 dirpath = os.path.dirname(path)
                 if not os.path.isdir(dirpath):
                         os.makedirs(dirpath)
