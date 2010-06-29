@@ -1,6 +1,7 @@
 from scraper.valleyscraper import ValleyScraper
 from pysqlite2 import dbapi2 as sqlite
 import constants
+import sys
 
 def createTable(cur):
         cur.execute("""
@@ -25,20 +26,38 @@ def insertTest(cur):
         """)
 
 def main():
-        conn = sqlite.connect(constants.DB_FILE)
-        cur = conn.cursor()
-
         createTable(cur)
         conn.commit()
 
         cur.execute('SELECT * FROM articles')
-        print len(cur.fetchall()), 'articles in db at', constants.DB_FILE
+        print len(cur.fetchall()), 'articles in database.'
 
-        # Run scrapers...
-	if 'VALLEY' in constants.ENABLED_SCRAPERS:
-		vs = ValleyScraper(conn)
-		vs.execute()
-        
+	lastfetch = None
+	while True:
+		input = raw_input('> ')
 
+		if input == 'scrape':
+			# Run scrapers...
+			if 'VALLEY' in constants.ENABLED_SCRAPERS:
+				vs = ValleyScraper(conn)
+				vs.execute()
+		elif input == 'print':
+			print lastfetch
+		else:
+			try:
+				cur.execute(input)
+				lastfetch = cur.fetchall()
+				print len(lastfetch), 'results.'
+			except sqlite.OperationalError:
+				lastfetch = None
+				print 'Bad query.'
+
+# Database setup
+conn = sqlite.connect(constants.DB_FILE)
+cur = conn.cursor()
+
+# Main startup
 if __name__ == "__main__":
-        main()
+	if not '-c' in sys.argv:
+		main()
+	# If we're not calling main, drop to Python console
