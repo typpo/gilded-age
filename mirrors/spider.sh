@@ -1,4 +1,5 @@
 #!/bin/bash
+# Downloads paper issues from the Valley of the Shadow project.
 
 papers=(rv ss vv fr sd vs vr)
 
