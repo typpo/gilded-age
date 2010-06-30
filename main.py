@@ -3,7 +3,7 @@ from pysqlite2 import dbapi2 as sqlite
 import constants
 import sys
 
-def createTable(cur):
+def createTables(cur):
         cur.execute("""
                CREATE TABLE IF NOT EXISTS articles
                     (id INTEGER PRIMARY KEY,
@@ -18,6 +18,22 @@ def createTable(cur):
                     timeEnter DATE)
                 """)
 
+        cur.execute("""
+               CREATE TABLE IF NOT EXISTS calais
+                    (id INTEGER PRIMARY KEY,
+		    FOREIGN KEY(article_id) REFERENCES articles(id),
+		    FOREIGN KEY(relation_id) REFERENCES calais_items(id))
+                """)
+
+	cur.execute("""
+		CREATE TABLE IF NOT EXISTS calais_items
+		    (id INTEGER PRIMARY KEY,
+		    type TEXT,
+		    data TEXT)
+		""")
+		
+        conn.commit()
+
 def insertTest(cur):
         cur.execute("""
                 INSERT INTO articles VALUES (
@@ -26,9 +42,6 @@ def insertTest(cur):
         """)
 
 def main():
-        createTable(cur)
-        conn.commit()
-
         cur.execute('SELECT * FROM articles')
         print len(cur.fetchall()), 'articles in database.'
 
@@ -58,6 +71,8 @@ cur = conn.cursor()
 
 # Main startup
 if __name__ == "__main__":
-	if not '-c' in sys.argv:
+	if '-t' in sys.argv:
+		createTables()
+	elif not '-c' in sys.argv:
 		main()
 	# If we're not calling main, drop to Python console
