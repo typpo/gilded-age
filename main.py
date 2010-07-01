@@ -59,9 +59,9 @@ def main():
 				vs.execute()
 		elif input == 'analyze':
 			# Run analyzers on last result
-			# TODO flags for different analyzers
-			ca = CalaisAnalyzer(conn)
-			ca.execute()
+			if 'CALAIS' in constants.ENABLED_ANALYZERS:
+				ca = CalaisAnalyzer(conn)
+				ca.execute()
 		elif input == 'print':
 			print lastfetch
 		else:

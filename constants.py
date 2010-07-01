@@ -16,3 +16,4 @@ VALLEY_DIR = 'valley'
 """
 Analyzer constants
 """
+ENABLED_ANALYZERS = ['CALAIS']
