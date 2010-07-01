@@ -8,8 +8,7 @@ class BaseAnalyzer(object):
                 self.conn = conn
                 self.cur = conn.cursor()
 
-	def execute(self, constraints):
-		"""Passes documents that match a given SQL constraint:
-		date, paper, page, etc.
-		"""
-		pass
+        @abc.abstractmethod
+	def execute(self, documents):
+		"""Runs analysis on a list of documents."""
+		return

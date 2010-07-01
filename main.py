@@ -1,4 +1,5 @@
 from scraper.valleyscraper import ValleyScraper
+from analyzer.calaisanalyzer import CalaisAnalyzer
 from pysqlite2 import dbapi2 as sqlite
 import constants
 import sys
@@ -18,12 +19,7 @@ def createTables(cur):
                     timeEnter DATE)
                 """)
 
-        cur.execute("""
-               CREATE TABLE IF NOT EXISTS calais
-                    (id INTEGER PRIMARY KEY,
-		    FOREIGN KEY(article_id) REFERENCES articles(id),
-		    FOREIGN KEY(relation_id) REFERENCES calais_items(id))
-                """)
+	return
 
 	cur.execute("""
 		CREATE TABLE IF NOT EXISTS calais_items
@@ -31,6 +27,13 @@ def createTables(cur):
 		    type TEXT,
 		    data TEXT)
 		""")
+
+        cur.execute("""
+               CREATE TABLE IF NOT EXISTS calais
+                    (id INTEGER PRIMARY KEY,
+		    FOREIGN KEY(article_id) REFERENCES articles(id),
+		    FOREIGN KEY(relation_id) REFERENCES calais_items(id))
+                """)
 		
         conn.commit()
 
@@ -54,6 +57,11 @@ def main():
 			if 'VALLEY' in constants.ENABLED_SCRAPERS:
 				vs = ValleyScraper(conn)
 				vs.execute()
+		elif input == 'analyze':
+			# Run analyzers on last result
+			# TODO flags for different analyzers
+			ca = CalaisAnalyzer(conn)
+			ca.execute()
 		elif input == 'print':
 			print lastfetch
 		else:
@@ -72,7 +80,7 @@ cur = conn.cursor()
 # Main startup
 if __name__ == "__main__":
 	if '-t' in sys.argv:
-		createTables()
+		createTables(conn)
 	elif not '-c' in sys.argv:
 		main()
 	# If we're not calling main, drop to Python console
