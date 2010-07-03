@@ -3,7 +3,7 @@ import abc
 from xml.dom import minidom
 from ConfigParser import ConfigParser
 
-class BaseScraper(object):
+class BaseScraper():
         __metaclass__ = abc.ABCMeta
 
         def __init__(self,conn):

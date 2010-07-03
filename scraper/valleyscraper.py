@@ -5,7 +5,6 @@ from basescraper import BaseScraper
 from utils import asciiDamnit
 from xml.dom import minidom
 import constants
-import abc
 import re
 import os
 import time
