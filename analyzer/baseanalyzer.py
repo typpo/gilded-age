@@ -1,6 +1,8 @@
 import abc
 
-class BaseAnalyzer(object):
+class BaseAnalyzer():
+	"""Base analysis class"""
+
         __metaclass__ = abc.ABCMeta
 
 	def __init__(self, conn):
