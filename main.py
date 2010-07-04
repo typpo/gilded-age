@@ -61,9 +61,11 @@ def main():
 			# Run analyzers on last result
 			if 'CALAIS' in constants.ENABLED_ANALYZERS:
 				ca = CalaisAnalyzer(conn)
-				ca.execute()
+				ca.execute(lastfetch)
 		elif input == 'print':
 			print lastfetch
+		elif input == 'q':
+			break
 		else:
 			try:
 				cur.execute(input)

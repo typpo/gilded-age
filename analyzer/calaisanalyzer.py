@@ -6,7 +6,7 @@ class CalaisAnalyzer(BaseAnalyzer):
 	and recording the results."""	
         def __init__(self, conn):
 		"""Initialize with database connection"""
-                super(BaseAnalyzer, self).__init__(conn)
+                super(CalaisAnalyzer, self).__init__(conn)
                 print 'Initializing CalaisAnalyzer...'
 
 	def execute(self, documents):

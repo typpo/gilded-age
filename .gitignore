@@ -5,3 +5,4 @@ output/*
 !output/clean
 mirrors/*
 !mirrors/spider
+analyzer/calais.cfg
