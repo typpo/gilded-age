@@ -19,18 +19,21 @@ def createTables(cur):
                     timeEnter DATE)
                 """)
 
-	return
-
 	cur.execute("""
 		CREATE TABLE IF NOT EXISTS calais_items
 		    (id INTEGER PRIMARY KEY,
 		    type TEXT,
-		    data TEXT)
+		    data TEXT,
+		    count INTEGER)
 		""")
 
         cur.execute("""
-               CREATE TABLE IF NOT EXISTS calais
+               CREATE TABLE IF NOT EXISTS calais_results
                     (id INTEGER PRIMARY KEY,
+		    article_id INTEGER,
+		    relation_id INTEGER,
+		    relevance REAL,
+		    has_full_text BOOLEAN,
 		    FOREIGN KEY(article_id) REFERENCES articles(id),
 		    FOREIGN KEY(relation_id) REFERENCES calais_items(id))
                 """)
@@ -83,6 +86,7 @@ cur = conn.cursor()
 if __name__ == "__main__":
 	if '-t' in sys.argv:
 		createTables(conn)
+		print 'Generated tables, exiting'
 	elif not '-c' in sys.argv:
 		main()
 	# If we're not calling main, drop to Python console

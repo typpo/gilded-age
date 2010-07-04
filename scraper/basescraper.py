@@ -9,7 +9,6 @@ class BaseScraper():
         def __init__(self,conn):
                 """Initializes with a database connection"""
                 self.conn = conn
-                self.cur = conn.cursor()
 
         def addArticle(self,date,title,data):
                 """Adds article to db"""
@@ -37,7 +36,7 @@ class BaseScraper():
         def toDb(self, args):
                 execute = "INSERT INTO articles VALUES (null, ?, ?, ?, ?, ?, ?, ?, datetime(?), datetime('now','localtime'))"
 
-                self.cur.execute(execute, args)
+                self.conn.cursor().execute(execute, args)
                 self.conn.commit()
 
         def createTextNode(self,name,text):
