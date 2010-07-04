@@ -1,6 +1,5 @@
 from BeautifulSoup import BeautifulStoneSoup
 from BeautifulSoup import BeautifulSoup
-from ConfigParser import ConfigParser
 from basescraper import BaseScraper
 from utils import asciiDamnit
 from xml.dom import minidom

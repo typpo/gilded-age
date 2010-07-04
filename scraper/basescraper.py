@@ -19,7 +19,6 @@ class BaseScraper():
                 """Loads configuration file containing data source"""
                 config = ConfigParser()
                 config.readfp(open(path))
-                config.read
 
                 sources = []
                 for section in config.sections():
