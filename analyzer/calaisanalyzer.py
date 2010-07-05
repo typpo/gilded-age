@@ -38,7 +38,17 @@ class CalaisAnalyzer(BaseAnalyzer):
 			# Grab full text and send to calais
 			article = doc[6]
 			if article is not None:
-				result = self.calais.analyze(article)
+				# Retry if request doesn't go through
+				repeat = True
+				while repeat:
+					try:
+						result = self.calais.analyze(article)
+						repeat = False
+					except ValueError as (errno, strerr):
+						print 'ValueError %d: %s' % (errno, strerr)
+						print 'Repeating...'
+						time.sleep(.25)
+
 				if hasattr(result, 'topics'):
 					for topic in result.topics:
 						category = topic['categoryName']
