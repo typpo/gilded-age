@@ -12,6 +12,9 @@ CALAIS_TABLE = 'calais_items'
 # Table to write article-entity relationships
 RELATIONSHIP_TABLE = 'calais_results'
 
+# Time between failed requests, in seconds.
+REPEAT_DELAY = 1
+
 class CalaisAnalyzer(BaseAnalyzer):
 	"""Class for sending database articles to OpenCalais
 	and recording the results."""	
@@ -44,10 +47,10 @@ class CalaisAnalyzer(BaseAnalyzer):
 					try:
 						result = self.calais.analyze(article)
 						repeat = False
-					except ValueError as (errno, strerr):
-						print 'ValueError %d: %s' % (errno, strerr)
+					except ValueError as err:
+						print 'ValueError: %s' % str(err)
 						print 'Repeating...'
-						time.sleep(.25)
+						time.sleep(REPEAT_DELAY)
 
 				if hasattr(result, 'topics'):
 					for topic in result.topics:
