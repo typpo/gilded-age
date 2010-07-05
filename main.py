@@ -40,12 +40,10 @@ def createTables(cur):
 		
         conn.commit()
 
-def insertTest(cur):
-        cur.execute("""
-                INSERT INTO articles VALUES (
-                    null, 'src', 'alignment', 1, 'title', 'summary', 'text', 'http://', date('1889-12-26'), datetime('now','localtime')
-                )
-        """)
+def cleanAnalysis():
+	cur.execute('DROP TABLE calais_items')
+	cur.execute('DROP TABLE calais_results')
+	conn.commit()
 
 def main():
         cur.execute('SELECT * FROM articles')
@@ -87,6 +85,9 @@ if __name__ == "__main__":
 	if '-t' in sys.argv:
 		createTables(conn)
 		print 'Generated tables, exiting'
+	elif '--clean' in sys.argv:
+		print 'Cleaning analysis tables'
+		cleanAnalysis()
 	elif not '-c' in sys.argv:
 		main()
 	# If we're not calling main, drop to Python console

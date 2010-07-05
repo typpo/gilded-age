@@ -39,26 +39,42 @@ class CalaisAnalyzer(BaseAnalyzer):
 			article = doc[6]
 			if article is not None:
 				result = self.calais.analyze(article)
-				if result.topics is not None:
+				if hasattr(result, 'topics'):
 					for topic in result.topics:
 						category = topic['categoryName']
 						score = topic['score'] if hasattr(topic, 'score') else 0
 						type = '_category'
 
 						# Add to db
-						print '\t%s' % (category)
 						self._addLink(id, type, category, score)
 
-						# See if this already exists
-				if result.entities is not None:
+				if hasattr(result, 'entities'):
 					for entity in result.entities:
 						type = entity['_type']
 						name = entity['name']
 						score = entity['relevance']
 
 						# Add to db
-						print '\t%s %s' % (type, name)
 						self._addLink(id, type, name, score)
+
+				if hasattr(result, 'relations'):
+					for relation in result.relations:
+						type = relation['_type']
+						for k,v in relation.items():
+							if k.startswith('_'):
+								continue
+							if isinstance(v, unicode):
+								relates_to = v
+							elif isinstance(v, dict) and v.has_key('name'):
+								relates_to = v['name']
+							else:
+								continue
+
+							subject = k
+							type = '_relation'
+							text = '%s _:_ %s' % (subject, relates_to)
+							score = 0
+							self._addLink(id, type, text, score)
 
 				# limit 4 per second
 				time.sleep(.25)
