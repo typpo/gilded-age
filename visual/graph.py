@@ -1,4 +1,4 @@
-from .articles import Article
+from .db.articles import Article
 
 class Graph:
     """Reads database and creates a graph object"""
