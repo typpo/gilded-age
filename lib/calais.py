@@ -22,7 +22,7 @@ urllib._urlopener = AppURLopener()
 
 class Calais():
     """
-    Python class that knows how to talk to the OpenCalais API.  Use the analyze() and analyze_url() methods, which return CalaisResponse objects.  
+    Python class that knows how to talk to the OpenCalais API.  Use the analyze() and analyze_url() methods, which return CalaisResponse objects.
     """
     api_key = None
     processing_directives = {"contentType":"TEXT/RAW", "outputFormat":"application/json", "reltagBaseURL":None, "calculateRelevanceScore":"true", "enableMetadataType":None, "discardMetadata":None, "omitOutputtingOriginalText":"true"}
@@ -48,7 +48,7 @@ class Calais():
 
     def get_random_id(self):
         """
-        Creates a random 10-character ID for your submission.  
+        Creates a random 10-character ID for your submission.
         """
         import string
         from random import choice
@@ -60,7 +60,7 @@ class Calais():
 
     def get_content_id(self, text):
         """
-        Creates a SHA1 hash of the text of your submission.  
+        Creates a SHA1 hash of the text of your submission.
         """
         import hashlib
         h = hashlib.sha1()
@@ -111,7 +111,7 @@ class CalaisResponse():
     """
     raw_response = None
     simplified_response = None
-    
+
     def __init__(self, raw_result):
         try:
             self.raw_response = json.load(StringIO(raw_result))
@@ -144,7 +144,7 @@ class CalaisResponse():
             return None
         info = self.doc['info']
         print "Calais Request ID: %s" % info['calaisRequestID']
-        if info.has_key('externalID'): 
+        if info.has_key('externalID'):
             print "External ID: %s" % info['externalID']
         if info.has_key('docTitle'):
             print "Title: %s " % info['docTitle']

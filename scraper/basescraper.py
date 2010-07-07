@@ -4,52 +4,52 @@ from xml.dom import minidom
 from ConfigParser import ConfigParser
 
 class BaseScraper():
-        __metaclass__ = abc.ABCMeta
+    __metaclass__ = abc.ABCMeta
 
-        def __init__(self,conn):
-                """Initializes with a database connection"""
-                self.conn = conn
+    def __init__(self,conn):
+        """Initializes with a database connection"""
+        self.conn = conn
 
-        def addArticle(self,date,title,data):
-                """Adds article to db"""
-                return False
+    def addArticle(self,date,title,data):
+        """Adds article to db"""
+        return False
 
-        def parseConfig(self,path):
-                """Loads configuration file containing data source"""
-                config = ConfigParser()
-                config.readfp(open(path))
+    def parseConfig(self,path):
+        """Loads configuration file containing data source"""
+        config = ConfigParser()
+        config.readfp(open(path))
 
-                sources = []
-                for section in config.sections():
-                        sectiondict = {}
-			for key, val in config.items(section):
-				sectiondict[key] = val
-			sources.append(sectiondict)
-                return sources
+        sources = []
+        for section in config.sections():
+            sectiondict = {}
+            for key, val in config.items(section):
+                sectiondict[key] = val
+            sources.append(sectiondict)
+        return sources
 
 
-        @abc.abstractmethod
-        def execute(self):
-                """Run scraper"""
-                return
+    @abc.abstractmethod
+    def execute(self):
+        """Run scraper"""
+        return
 
-        def toDb(self, args):
-                execute = "INSERT INTO articles VALUES (null, ?, ?, ?, ?, ?, ?, ?, datetime(?), datetime('now','localtime'))"
+    def toDb(self, args):
+        execute = "INSERT INTO articles VALUES (null, ?, ?, ?, ?, ?, ?, ?, datetime(?), datetime('now','localtime'))"
 
-                self.conn.cursor().execute(execute, args)
-                self.conn.commit()
+        self.conn.cursor().execute(execute, args)
+        self.conn.commit()
 
-        def createTextNode(self,name,text):
-		"""Create an XML node containing text"""
-                xml = minidom.Document()
-                e = xml.createElement(name)
-                e.appendChild(xml.createTextNode(unicode(text)))
-                return e
+    def createTextNode(self,name,text):
+        """Create an XML node containing text"""
+        xml = minidom.Document()
+        e = xml.createElement(name)
+        e.appendChild(xml.createTextNode(unicode(text)))
+        return e
 
-	def writeXml(self, path, xml):
-                """Write XML doc to file"""
-                dirpath = os.path.dirname(path)
-                if not os.path.isdir(dirpath):
-                        os.makedirs(dirpath)
-                f = open(path, 'w')
-                xml.writexml(f,'\t','\t','\n', 'utf-8')
+    def writeXml(self, path, xml):
+        """Write XML doc to file"""
+        dirpath = os.path.dirname(path)
+        if not os.path.isdir(dirpath):
+            os.makedirs(dirpath)
+        f = open(path, 'w')
+        xml.writexml(f,'\t','\t','\n', 'utf-8')

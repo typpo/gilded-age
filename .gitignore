@@ -6,3 +6,4 @@ output/*
 mirrors/*
 !mirrors/spider
 analyzer/calais.cfg
+reindent.py
