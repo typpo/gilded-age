@@ -1,0 +1,20 @@
+def processAll(rows):
+    """Takes a db response of many rows and returns a list of extracted article results."""
+    ret = []
+    for row in rows:
+        ret.append(Article(row))
+    return ret
+
+class Article:
+    """Takes a row in the articles db and parses it."""
+    def __init__(self, row):
+        self.id = row[0]
+        self.source = row[1]
+        self.alignment = row[2]
+        self.page = row[3]
+        self.title = row[4]
+        self.summary = row[5]
+        self.text = row[6]
+        self.url = row[7]
+        self.articleDate = row[8]
+        self.timeEntered = row[9]
