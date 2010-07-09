@@ -9,11 +9,18 @@ Scraper constants
 """
 ENABLED_SCRAPERS = ['VALLEY']
 
-# Valley consts
-VALLEY_CONFIG = 'valley.cfg'
+### Valley consts
+VALLEY_CONFIG = 'cfg/valley.cfg'
 VALLEY_DIR = 'valley'
 
 """
 Analyzer constants
 """
 ENABLED_ANALYZERS = ['CALAIS']
+
+### Calais consts
+
+# Settings for calais analyzer
+CALAIS_CONFIG = 'analyzer/calais.cfg'
+
+# TODO config for table names?

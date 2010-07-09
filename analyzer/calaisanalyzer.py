@@ -2,15 +2,7 @@ from .lib.calais import Calais
 from baseanalyzer import BaseAnalyzer
 from ConfigParser import ConfigParser
 import time
-
-# Settings for calais analyzer
-CONFIG_PATH = 'analyzer/calais.cfg'
-
-# Table to write calais entities
-CALAIS_TABLE = 'calais_items'
-
-# Table to write article-entity relationships
-RELATIONSHIP_TABLE = 'calais_results'
+import constants
 
 class CalaisAnalyzer(BaseAnalyzer):
     """Class for sending database articles to OpenCalais
@@ -25,7 +17,7 @@ class CalaisAnalyzer(BaseAnalyzer):
     def loadkey(self):
         """Loads OpenCalais key from settings file"""
         config = ConfigParser()
-        config.readfp(open(CONFIG_PATH))
+        config.readfp(open(constants.CALAIS_CONFIG))
         self.key = config.get('config', 'key')
 
     def execute(self, documents):
