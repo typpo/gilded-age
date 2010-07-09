@@ -60,3 +60,31 @@ class Graph:
 
                         ret.extend(articles)
                 return ret
+
+    def getCategory(self, article):
+        """Given an article, return its category"""
+        if not isinstance(article, articles.Article):
+            print 'Wrong type, can\'t build articles graph'
+            return
+
+        cur = self.conn.cursor()
+        
+        ret = []
+        for analyzer in constants.ENABLED_ANALYZERS:
+            if analyzer == 'CALAIS':
+                # Find results linked to this article.
+                query = 'SELECT * from calais_results WHERE article_id=?'
+                cur.execute(query, (article.id))
+                results = calaisresults.processAll(cur.fetchall())
+
+                for result in results:               
+                    # Get the relations linked to the article.
+                    query = 'SELECT * from calais_items WHERE id=? AND type=?'
+                    cur.execute(query, (result.relation_id, '_category'))
+                    relations = calaisitems.processAll(cur.fetchall())
+
+                    ret.extend(relations)
+        return ret
+
+    def getEntities(self, article):
+        pass
