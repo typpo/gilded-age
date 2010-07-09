@@ -5,5 +5,5 @@ output/*
 !output/clean
 mirrors/*
 !mirrors/spider
-analyzer/calais.cfg
+calais.cfg
 reindent.py
