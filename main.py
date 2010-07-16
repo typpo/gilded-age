@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 from scraper.valleyscraper import ValleyScraper
 from analyzer.calaisanalyzer import CalaisAnalyzer
 from visual.graph import Graph

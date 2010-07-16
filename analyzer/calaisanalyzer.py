@@ -11,14 +11,15 @@ class CalaisAnalyzer(BaseAnalyzer):
         """Initialize with database connection"""
         super(CalaisAnalyzer, self).__init__(conn)
         print 'Initializing CalaisAnalyzer...'
-        self.loadkey()
-        self.calais = Calais(self.key, submitter='gildedage')
+        self.loadcfg()
+        self.calais = Calais(self.key, submitter=self.identifier)
 
-    def loadkey(self):
+    def loadcfg(self):
         """Loads OpenCalais key from settings file"""
         config = ConfigParser()
         config.readfp(open(constants.CALAIS_CONFIG))
         self.key = config.get('config', 'key')
+        self.identifier = config.get('config', 'identifier')
 
     def execute(self, documents):
         """Runs analysis on documents"""
