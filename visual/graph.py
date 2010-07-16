@@ -21,13 +21,13 @@ class Graph:
             if analyzer == 'CALAIS':
                 # Find results linked to this article.
                 query = 'SELECT * from calais_results WHERE article_id=?'
-                cur.execute(query, (article.id))
+                cur.execute(query, (article.id,))
                 results = calaisresults.processAll(cur.fetchall())
 
                 for result in results:               
                     # Get the relations linked to the article.
                     query = 'SELECT * from calais_items WHERE id=?'
-                    cur.execute(query, (result.relation_id))
+                    cur.execute(query, (result.relation_id,))
                     relations = calaisitems.processAll(cur.fetchall())
 
                     ret.extend(relations)
@@ -49,7 +49,7 @@ class Graph:
                 for relation in relations:
                     # Find results concerning the same relation and order by high scores.
                     query = 'SELECT * from calais_results WHERE relation_id=? order by relevance'
-                    cur.execute(query, (relation.id))
+                    cur.execute(query, (relation.id,))
                     results = calaisresults.processAll(cur.fetchall())
 
                     # Get all the articles associated with these results.
@@ -74,7 +74,7 @@ class Graph:
             if analyzer == 'CALAIS':
                 # Find results linked to this article.
                 query = 'SELECT * from calais_results WHERE article_id=?'
-                cur.execute(query, (article.id))
+                cur.execute(query, (article.id,))
                 results = calaisresults.processAll(cur.fetchall())
 
                 for result in results:               
@@ -87,4 +87,27 @@ class Graph:
         return ret
 
     def getEntities(self, article):
-        pass
+        """Given an article, return its entities"""
+        if not isinstance(article, articles.Article):
+            print 'Wrong type, can\'t build articles graph'
+            return
+
+        cur = self.conn.cursor()
+        
+        ret = []
+        for analyzer in constants.ENABLED_ANALYZERS:
+            if analyzer == 'CALAIS':
+                # Find results linked to this article.
+                query = 'SELECT * from calais_results WHERE article_id=?'
+                cur.execute(query, (article.id,))
+                results = calaisresults.processAll(cur.fetchall())
+
+                for result in results:               
+                    # Get the entities linked to the article.
+                    # Anything without a specially reserved type (category, relation) is an entity.
+                    query = 'SELECT * from calais_items WHERE id=? AND type!=? AND type!=?'
+                    cur.execute(query, (result.relation_id, '_category', '_relation'))
+                    entities = calaisitems.processAll(cur.fetchall())
+
+                    ret.extend(entities)
+        return ret

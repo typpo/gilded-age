@@ -1,5 +1,6 @@
 from scraper.valleyscraper import ValleyScraper
 from analyzer.calaisanalyzer import CalaisAnalyzer
+from visual.graph import Graph
 from pysqlite2 import dbapi2 as sqlite
 import constants
 import sys

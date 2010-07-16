@@ -2,7 +2,7 @@ def processAll(rows):
     """Takes a db response of many rows and returns a list of extracted article results."""
     ret = []
     for row in rows:
-        ret.append(CalaisItem(row))
+        ret.append(CalaisResult))
     return ret
 
 class CalaisResult:
