@@ -1,12 +1,36 @@
+from node import Node
 import constants
 import db.articles as articles
 import db.calaisitems as calaisitems
 import db.calaisresults as calaisresults
 
 class Graph:
-    """Reads database and creates a graph object"""
+    """Reads database and creates a graph object, and other basic analytics
+    and canned queries."""
+
     def __init__(self, conn):
         self.conn = conn
+
+    def generateGraph(self, articles):
+        """Takes a list of articles, creates and returns a graph object"""
+        V = []
+        E = []
+        G = (V, E)
+
+        for article in articles:
+            # Get analysis
+            entities = self.getEntities(article)
+            category = self.getCategories(article)[0]
+
+            articlenode = Node(article)
+            articlenode.category = category
+            V.add(articlenode)
+
+            for entity in entities:
+                entitynode = Node(entity)
+                entitynode.category = category
+                V.add(entitynode)
+                E.add((articlenode, entitynode))
 
     def getAnalysis(self, article):
         """Given an article, return analysis associated with it"""
@@ -63,7 +87,7 @@ class Graph:
                         ret.extend(related)
                 return ret
 
-    def getCategory(self, article):
+    def getCategories(self, article):
         """Given an article, return its category"""
         if not isinstance(article, articles.Article):
             print 'Wrong type, can\'t build articles graph'
