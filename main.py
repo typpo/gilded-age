@@ -2,6 +2,9 @@ from scraper.valleyscraper import ValleyScraper
 from analyzer.calaisanalyzer import CalaisAnalyzer
 from visual.graph import Graph
 from pysqlite2 import dbapi2 as sqlite
+import db.articles
+import db.calaisitems
+import db.calaisresults
 import constants
 import sys
 

@@ -48,17 +48,19 @@ class Graph:
                 ret = []
                 for relation in relations:
                     # Find results concerning the same relation and order by high scores.
+                    # TODO needs to be improved
                     query = 'SELECT * from calais_results WHERE relation_id=? order by relevance'
                     cur.execute(query, (relation.id,))
                     results = calaisresults.processAll(cur.fetchall())
 
                     # Get all the articles associated with these results.
                     for result in results:
+                        # TODO avoid duplicates
                         query = 'SELECT * from articles WHERE id=?'
-                        cur.execute(query, (result.article_id))
-                        articles = articles.processAll(cur.fetchall())
+                        cur.execute(query, (result.article_id,))
+                        related = articles.processAll(cur.fetchall())
 
-                        ret.extend(articles)
+                        ret.extend(related)
                 return ret
 
     def getCategory(self, article):
