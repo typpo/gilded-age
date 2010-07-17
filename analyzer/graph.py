@@ -1,6 +1,6 @@
 from node import Node
 import constants
-import db.articles as articles
+import db.articles
 import db.calaisitems as calaisitems
 import db.calaisresults as calaisresults
 
@@ -34,9 +34,10 @@ class Graph:
 
     def getArticles(self, id=None, source=None, alignment=None, page=None, title=None, summary=None, \
         text=None, url=None, date=None, relevance=None, type=None, type_data=None):
-
         """Get articles based on a number of article and relationship parameters
-        TODO configurable comparison"""
+        TODO configurable comparison
+        TODO make it possible to skip articles query"""
+        cur = self.conn.cursor()
 
         # Prepare articles query
         queryparts = []
@@ -72,47 +73,52 @@ class Graph:
             queryparts.append('date=?')
             queryargs.append(url)
 
-        query = 'SELECT * FROM articles WHERE ' 
-        query += ' AND '.join(queryparts)
+        if len(queryparts) < 1:
+            return self.getAnalysis(type=type, type_data=type_data, relevance=relevance)
+        else:
+            query = 'SELECT * FROM articles'
+            if len(queryparts) > 0:
+                query += ' WHERE '
+            query += ' AND '.join(queryparts)
 
-        # Execute articles query
-        cur.execute(query, tuple(queryargs))
-        articles = articles.processAll(cur.fetchall())
+            # Execute articles query
+            cur.execute(query, tuple(queryargs))
+            articles = db.articles.processAll(cur.fetchall())
 
-        # See if we need to get analysis
-        if relevance is None and type is None and type_data is None:
-            return articles
+            # See if we need to get analysis
+            if relevance is None and type is None and type_data is None:
+                return articles
 
-        # We need to apply analysis parameters
-        for article in articles:
-            # Get article analysis
-            analysis = self.getAnalysis(article, type=type, type_data=type_data, relevance=relevance)
+            # We need to apply analysis parameters
+            ret = []
+            for article in articles:
+                # Get article analysis
+                ret.extend(self.getAnalysis(article_id=article.id, type=type, type_data=type_data, relevance=relevance))
+            return ret
 
-    def getAnalysis(self, article, type=None, type_data=None, relevance=None):
+    def getAnalysis(self, article_id=None, type=None, type_data=None, relevance=None):
         """Given an article, return analysis associated with it"""
-        if not isinstance(article, articles.Article):
-            print 'Wrong type, can\'t build articles graph'
-            return
-
         cur = self.conn.cursor()
         
         ret = []
         for analyzer in constants.ENABLED_ANALYZERS:
             if analyzer == 'CALAIS':
-                # Find results linked to this article.
+                # Find results linked
                 queryparts = []
                 queryargs = []
-                # Just one option for now, but maybe we'll add more someday...
+
                 if relevance is not None:
                     queryparts.append('relevance=?')
                     queryargs.append(relevance)
-
-                # Handle article ID
-                queryparts.append('article_id=?')
-                queryargs.append(article.id)
+                if article_id is not None:
+                    # Look only for supplied article
+                    queryparts.append('article_id=?')
+                    queryargs.append(article.id)
 
                 # Build query
-                query = 'SELECT * from calais_results WHERE '
+                query = 'SELECT * from calais_results'
+                if len(queryparts) > 0:
+                    query += ' WHERE '
                 query += ' AND '.join(queryparts)
 
                 # Execute it
@@ -147,7 +153,7 @@ class Graph:
 
     def getRelatedArticles(self, article):
         """Get articles related to a given article"""
-        if not isinstance(article, articles.Article):
+        if not isinstance(article, db.articles.Article):
             print 'Wrong type, can\'t build articles graph'
             return
 
@@ -170,14 +176,14 @@ class Graph:
                         # TODO avoid duplicates
                         query = 'SELECT * from articles WHERE id=?'
                         cur.execute(query, (result.article_id,))
-                        related = articles.processAll(cur.fetchall())
+                        related = db.articles.processAll(cur.fetchall())
 
                         ret.extend(related)
                 return ret
 
     def getCategories(self, article):
         """Given an article, return its category"""
-        if not isinstance(article, articles.Article):
+        if not isinstance(article, db.articles.Article):
             print 'Wrong type, can\'t build articles graph'
             return
 
@@ -202,7 +208,7 @@ class Graph:
 
     def getEntities(self, article):
         """Given an article, return its entities"""
-        if not isinstance(article, articles.Article):
+        if not isinstance(article, db.articles.Article):
             print 'Wrong type, can\'t build articles graph'
             return
 
