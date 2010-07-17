@@ -85,6 +85,7 @@ def main():
 # Database setup
 conn = sqlite.connect(constants.DB_FILE)
 cur = conn.cursor()
+g = Graph(conn)
 
 # Main startup
 if __name__ == "__main__":
