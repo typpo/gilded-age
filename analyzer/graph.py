@@ -100,7 +100,7 @@ class Graph:
             query += ' AND '.join(queryparts)
 
             # Execute articles query
-            cur.execute(query, tuple(queryargs))
+            cur.execute(query, queryargs)
             articles = db.articles.processAll(cur.fetchall())
 
             # See if we need to get analysis
@@ -128,20 +128,23 @@ class Graph:
             if analyzer == 'CALAIS':
                 # Get the relations linked to the article.
                 queryparts = []
-                queryargs = []
+                queryargs = ()
                 if type is not None:
-                    queryparts.append('type=?')
-                    queryargs.append(type)
+                    clause, args = self._buildClause('type', type)
+                    queryparts.append(clause)
+                    queryargs += args
                 if type_data is not None:
-                    queryparts.append('data LIKE ?')
-                    queryargs.append(type_data)
+                    clause, args = self._buildClause('data', type_data, \
+                        comparator='LIKE')
+                    queryparts.append(clause)
+                    queryargs += args
 
                 # Build query to filter by parameters
                 query = 'SELECT * from calais_items WHERE '
                 query += ' AND '.join(queryparts)
 
                 # Execute query
-                cur.execute(query, tuple(queryargs))
+                cur.execute(query, queryargs)
                 calaisitems = db.calaisitems.processAll(cur.fetchall())
 
                 # TODO quit if there aren't enough results
@@ -269,7 +272,7 @@ class Graph:
             args = tuple(values)
         else:
             clause = '%s%s?' % (field, comparator)
-            args = tuple(values)
+            args = (values,)
 
         return clause, args
 
