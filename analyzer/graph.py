@@ -109,8 +109,8 @@ class Graph:
         Except for noted below, all parameters are tested for exact equality:
         relevance -- specifies score of at least X
         type_data -- specifies data is LIKE
-        
-        TODO if one of these parameters is a list, then OR them together"""
+        """
+
         cur = self.conn.cursor()
         
         ret = []
@@ -121,12 +121,15 @@ class Graph:
                 queryargs = ()
 
                 if relevance is not None:
-                    queryparts.add('relevance>=?')
-                    queryargs.append(relevance)
+                    clause, args = self._buildClause('relevance', relevance, \
+                        comparator='>=')
+                    queryparts.add(clause)
+                    queryargs += args
                 if article_id is not None:
-                    # Look only for supplied article
-                    queryparts.append('article_id=?')
-                    queryargs.append(article.id)
+                    # Limits results to those pertaining to given article ids
+                    clause, args = self._buildClause('article_id', article_id)
+                    queryparts.add(clause)
+                    queryargs += args
 
                 # Build query
                 query = 'SELECT * from calais_results'
@@ -164,21 +167,22 @@ class Graph:
                     ret.extend(relations)
         return ret
 
-    def _buildClause(self, field, contents, comparator='='):
-        """OR's together contents of a field to construct a sql where clause
+    def _buildClause(self, field, values, comparator='='):
+        """OR's together values of a field to construct a sql where clause
 
         returns -- (clause of sql query, parameter-bound arguments)
         """
         if comparator not in VALID_SQL_COMPARATORS:
             print 'Bad comparator "%s": not allowed.' % (comparator)
-            return
+            return None, None
 
-        if type(contents) is list:
-            clause = '(' + (field+'=?')*len(contents) + ')'
-            args = tuple(contents)
+        if type(values) is list:
+            items = ('%s%s?' % (field, comparator)*len(values)
+            clause = '(%s)' % (' OR '.join(items))
+            args = tuple(values)
         else:
-            clause = '%s%sfield=?' % (contents, comparator)
-            args = tuple(contents)
+            clause = '%s%s?' % (field, comparator)
+            args = tuple(values)
 
         return clause, args
 
