@@ -1,8 +1,8 @@
 from node import Node
 import constants
 import db.articles
-import db.calaisitems as calaisitems
-import db.calaisresults as calaisresults
+import db.calaisitems
+import db.calaisresults
 
 # SQL comparators to accept in api calls
 VALID_SQL_COMPARATORS = ['=', '!=', '<', '<=', '>', '>=', 'LIKE']
@@ -94,12 +94,9 @@ class Graph:
             queryparts.append(clause)
             queryargs += args
 
-        if len(queryparts) < 1:
-            return self.getAnalysis(type=type, type_data=type_data, relevance=relevance)
-        else:
+        if len(queryparts) > 0:
             query = 'SELECT * FROM articles'
-            if len(queryparts) > 0:
-                query += ' WHERE '
+            query += ' WHERE '
             query += ' AND '.join(queryparts)
 
             # Execute articles query
@@ -110,12 +107,88 @@ class Graph:
             if relevance is None and type is None and type_data is None:
                 return articles
 
-            # We need to apply analysis parameters
-            ret = []
-            for article in articles:
-                # Get article analysis
-                ret.extend(self.getAnalysis(article_id=article.id, type=type, type_data=type_data, relevance=relevance))
-            return ret
+            # Apply analysis parameters
+            # TODO we assume that some articles are returned
+            articleids = [article.id for article in articles]
+        else:
+            # No article constraints
+            articleids = None
+
+        return self.getArticlesWithRelationship(article_id=articleids, type=type,\
+            type_data=type_data, relevance=relevance)
+
+    def getArticlesWithRelationship(self, article_id=None, type=None, type_data=None,\
+        relevance=None):
+        """Find articles that match certain parameters"""
+
+        cur = self.conn.cursor()
+        
+        ret = []
+        for analyzer in constants.ENABLED_ANALYZERS:
+            if analyzer == 'CALAIS':
+                # Get the relations linked to the article.
+                queryparts = []
+                queryargs = []
+                if type is not None:
+                    queryparts.append('type=?')
+                    queryargs.append(type)
+                if type_data is not None:
+                    queryparts.append('data LIKE ?')
+                    queryargs.append(type_data)
+
+                # Build query to filter by parameters
+                query = 'SELECT * from calais_items WHERE '
+                query += ' AND '.join(queryparts)
+
+                # Execute query
+                cur.execute(query, tuple(queryargs))
+                calaisitems = db.calaisitems.processAll(cur.fetchall())
+
+                # TODO quit if there aren't enough results
+
+                # Build a query to get results that match
+                relationids = [item.id for item in calaisitems]
+                queryparts = []
+                queryargs = ()
+
+                # TODO query building fails if multiple constraints are provided
+
+                # filter relevance
+                if relevance is not None:
+                    clause, args = self._buildClause('relevance', relevance, \
+                        comparator='>=')
+                    queryparts.append(clause)
+                    queryargs += args
+
+                # filter article id
+                if article_id is not None:
+                    clause, args = self._buildClause('article_id', article_id)
+                    queryparts.append(clause)
+                    queryargs += args
+
+                # Filter by relationships gotten from the last query
+                # We assume relationids contains at least one item
+                clause, args = self._buildClause('relation_id', relationids)
+                queryparts.append(clause)
+                queryargs += args
+
+                query = 'SELECT * FROM calais_results WHERE '
+                query += ' AND '.join(queryparts)
+
+                cur.execute(query, queryargs)
+                calaisresults = db.calaisresults.processAll(cur.fetchall())
+
+                # Now return articles for each result
+                query = 'SELECT * FROM articles WHERE '
+                articleids = [result.article_id for result in calaisresults]
+                # TODO we assume articleids contains > 0 items
+                clause, args = self._buildClause('id', articleids)
+                query += clause
+
+                cur.execute(query, args)
+                ret.extend(cur.fetchall())
+
+        return db.articles.processAll(ret)
 
     def getAnalysis(self, article_id=None, type=None, type_data=None, relevance=None):
         """Given an article, return analysis associated with it.
@@ -153,7 +226,7 @@ class Graph:
 
                 # Execute it
                 cur.execute(query, tuple(queryargs))
-                results = calaisresults.processAll(cur.fetchall())
+                results = db.calaisresults.processAll(cur.fetchall())
 
                 for result in results:               
                     # Get the relations linked to the article.
@@ -166,7 +239,7 @@ class Graph:
                         queryparts.append('data LIKE ?')
                         queryargs.append(type_data)
 
-                    # set ID
+                    # set id
                     queryparts.append('id=?')
                     queryargs.append(result.relation_id)
 
@@ -176,7 +249,7 @@ class Graph:
 
                     # Execute query
                     cur.execute(query, tuple(queryargs))
-                    relations = calaisitems.processAll(cur.fetchall())
+                    relations = db.calaisitems.processAll(cur.fetchall())
 
                     ret.extend(relations)
         return ret
@@ -191,7 +264,6 @@ class Graph:
             return None, None
 
         if type(values) is list:
-            # Testing just one field and value:
             items = ['%s%s?' % (field, comparator)]*len(values)
             clause = '(%s)' % (' OR '.join(items))
             args = tuple(values)
@@ -200,6 +272,10 @@ class Graph:
             args = tuple(values)
 
         return clause, args
+
+    #
+    # --- OLDER FUNCTIONS ---
+    #
 
     def getRelatedArticles(self, article):
         """Get articles related to a given article"""
@@ -219,7 +295,7 @@ class Graph:
                     # TODO needs to be improved
                     query = 'SELECT * from calais_results WHERE relation_id=? order by relevance'
                     cur.execute(query, (relation.id,))
-                    results = calaisresults.processAll(cur.fetchall())
+                    results = db.calaisresults.processAll(cur.fetchall())
 
                     # Get all the articles associated with these results.
                     for result in results:
@@ -245,13 +321,13 @@ class Graph:
                 # Find results linked to this article.
                 query = 'SELECT * from calais_results WHERE article_id=?'
                 cur.execute(query, (article.id,))
-                results = calaisresults.processAll(cur.fetchall())
+                results = db.calaisresults.processAll(cur.fetchall())
 
                 for result in results:               
                     # Get the relations linked to the article.
                     query = 'SELECT * from calais_items WHERE id=? AND type=?'
                     cur.execute(query, (result.relation_id, '_category'))
-                    relations = calaisitems.processAll(cur.fetchall())
+                    relations = db.calaisitems.processAll(cur.fetchall())
 
                     ret.extend(relations)
         return ret
@@ -270,14 +346,14 @@ class Graph:
                 # Find results linked to this article.
                 query = 'SELECT * from calais_results WHERE article_id=?'
                 cur.execute(query, (article.id,))
-                results = calaisresults.processAll(cur.fetchall())
+                results = db.calaisresults.processAll(cur.fetchall())
 
                 for result in results:               
                     # Get the entities linked to the article.
                     # Anything without a specially reserved type (category, relation) is an entity.
                     query = 'SELECT * from calais_items WHERE id=? AND type!=? AND type!=?'
                     cur.execute(query, (result.relation_id, '_category', '_relation'))
-                    entities = calaisitems.processAll(cur.fetchall())
+                    entities = db.calaisitems.processAll(cur.fetchall())
 
                     ret.extend(entities)
         return ret

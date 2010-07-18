@@ -22,5 +22,3 @@ ENABLED_ANALYZERS = ['CALAIS']
 
 # Settings for calais analyzer
 CALAIS_CONFIG = 'analyzer/calais.cfg'
-
-# TODO config for table names?
