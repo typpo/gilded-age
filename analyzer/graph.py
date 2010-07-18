@@ -4,6 +4,9 @@ import db.articles
 import db.calaisitems as calaisitems
 import db.calaisresults as calaisresults
 
+# SQL comparators to accept in api calls
+VALID_SQL_COMPARATORS = ['=', '!=', '<', '<=', '>', '>=', 'LIKE']
+
 class Graph:
     """Reads database and creates a graph object, and other basic analytics
     and canned queries."""
@@ -115,10 +118,10 @@ class Graph:
             if analyzer == 'CALAIS':
                 # Find results linked
                 queryparts = []
-                queryargs = []
+                queryargs = ()
 
                 if relevance is not None:
-                    queryparts.append('relevance>=?')
+                    queryparts.add('relevance>=?')
                     queryargs.append(relevance)
                 if article_id is not None:
                     # Look only for supplied article
@@ -161,17 +164,20 @@ class Graph:
                     ret.extend(relations)
         return ret
 
-    def _buildClause(self, field, contents):
+    def _buildClause(self, field, contents, comparator='='):
         """OR's together contents of a field to construct a sql where clause
 
         returns -- (clause of sql query, parameter-bound arguments)
         """
+        if comparator not in VALID_SQL_COMPARATORS:
+            print 'Bad comparator "%s": not allowed.' % (comparator)
+            return
 
         if type(contents) is list:
             clause = '(' + (field+'=?')*len(contents) + ')'
             args = tuple(contents)
         else:
-            clause = field+'=?'
+            clause = '%s%sfield=?' % (contents, comparator)
             args = tuple(contents)
 
         return clause, args
