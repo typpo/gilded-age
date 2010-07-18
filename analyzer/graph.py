@@ -42,7 +42,7 @@ class Graph:
         Except for noted below, all parameters are tested for exact equality:
         title, summary, text -- specifies data is LIKE
 
-        TODO if one of these parameters is a list, then OR them together"""
+        TODO pass in dict instead of params. Dict keys should be validated"""
 
         cur = self.conn.cursor()
 
@@ -50,35 +50,49 @@ class Graph:
         queryparts = []
         queryargs = []
         if id is not None:
-            queryparts.append('id=?')
-            queryargs.append(id)
+            clause, args = self._buildClause('id', id)
+            queryparts.append(clause)
+            queryargs.append(queryargs)
         if source is not None:
-            queryparts.append('source=?')
-            queryargs.append(source)
+            clause, args = self._buildClause('source', source)
+            queryparts.append(clause)
+            queryargs.append(queryargs)
         if alignment is not None:
-            queryparts.append('alignment=?')
-            queryargs.append(alignment)
+            clause, args = self._buildClause('alignment', alignment)
+            queryparts.append(clause)
+            queryargs.append(queryargs)
         if page is not None:
-            queryparts.append('page=?')
-            queryargs.append(page)
+            clause, args = self._buildClause('page', page)
+            queryparts.append(clause)
+            queryargs.append(queryargs)
         if title is not None:
-            queryparts.append('title LIKE ?')
-            queryargs.append(title)
+            clause, args = self._buildClause('title', title, \
+                comparator='LIKE')
+            queryparts.append(clause)
+            queryargs.append(queryargs)
         if summary is not None:
-            queryparts.append('summary LIKE ?')
-            queryargs.append(summary)
+            clause, args = self._buildClause('summary', summary, \
+                comparator='LIKE')
+            queryparts.append(clause)
+            queryargs.append(queryargs)
         if text is not None:
             if text == 'True':
-                queryparts.append('text!="None"')
+                # Ensure that there is text in this article.
+                clause, args = self._buildClause('text', 'None', \
+                    comparator='!=')
             else:
-                queryparts.append('text LIKE ?')
-                queryargs.append(text)
+                clause, args = self._buildClause('text', text, \
+                    comparator='LIKE')
+            queryparts.append(clause)
+            queryargs.append(queryargs)
         if url is not None:
-            queryparts.append('url=?')
-            queryargs.append(url)
+            clause, args = self._buildClause('url', url)
+            queryparts.append(clause)
+            queryargs.append(queryargs)
         if date is not None:
-            queryparts.append('date=?')
-            queryargs.append(url)
+            clause, args = self._buildClause('date', date)
+            queryparts.append(clause)
+            queryargs.append(queryargs)
 
         if len(queryparts) < 1:
             return self.getAnalysis(type=type, type_data=type_data, relevance=relevance)
