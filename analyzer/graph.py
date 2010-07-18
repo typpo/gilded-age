@@ -34,9 +34,13 @@ class Graph:
 
     def getArticles(self, id=None, source=None, alignment=None, page=None, title=None, summary=None, \
         text=None, url=None, date=None, relevance=None, type=None, type_data=None):
-        """Get articles based on a number of article and relationship parameters
+        """Get articles based on a number of article and relationship parameters.
+
         Except for noted below, all parameters are tested for exact equality:
-        title, summary, text -- specifies data is LIKE"""
+        title, summary, text -- specifies data is LIKE
+
+        TODO if one of these parameters is a list, then OR them together"""
+
         cur = self.conn.cursor()
 
         # Prepare articles query
@@ -97,10 +101,13 @@ class Graph:
             return ret
 
     def getAnalysis(self, article_id=None, type=None, type_data=None, relevance=None):
-        """Given an article, return analysis associated with it
+        """Given an article, return analysis associated with it.
+
         Except for noted below, all parameters are tested for exact equality:
         relevance -- specifies score of at least X
-        type_data -- specifies data is LIKE"""
+        type_data -- specifies data is LIKE
+        
+        TODO if one of these parameters is a list, then OR them together"""
         cur = self.conn.cursor()
         
         ret = []
@@ -153,6 +160,21 @@ class Graph:
 
                     ret.extend(relations)
         return ret
+
+    def _buildClause(self, field, contents):
+        """OR's together contents of a field to construct a sql where clause
+
+        returns -- (clause of sql query, parameter-bound arguments)
+        """
+
+        if type(contents) is list:
+            clause = '(' + (field+'=?')*len(contents) + ')'
+            args = tuple(contents)
+        else:
+            clause = field+'=?'
+            args = tuple(contents)
+
+        return clause, args
 
     def getRelatedArticles(self, article):
         """Get articles related to a given article"""
