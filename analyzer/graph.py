@@ -48,33 +48,33 @@ class Graph:
 
         # Prepare articles query
         queryparts = []
-        queryargs = []
+        queryargs = ()
         if id is not None:
             clause, args = self._buildClause('id', id)
             queryparts.append(clause)
-            queryargs.append(queryargs)
+            queryargs += args
         if source is not None:
             clause, args = self._buildClause('source', source)
             queryparts.append(clause)
-            queryargs.append(queryargs)
+            queryargs += args
         if alignment is not None:
             clause, args = self._buildClause('alignment', alignment)
             queryparts.append(clause)
-            queryargs.append(queryargs)
+            queryargs += args
         if page is not None:
             clause, args = self._buildClause('page', page)
             queryparts.append(clause)
-            queryargs.append(queryargs)
+            queryargs += args
         if title is not None:
             clause, args = self._buildClause('title', title, \
                 comparator='LIKE')
             queryparts.append(clause)
-            queryargs.append(queryargs)
+            queryargs += args
         if summary is not None:
             clause, args = self._buildClause('summary', summary, \
                 comparator='LIKE')
             queryparts.append(clause)
-            queryargs.append(queryargs)
+            queryargs += args
         if text is not None:
             if text == 'True':
                 # Ensure that there is text in this article.
@@ -84,15 +84,15 @@ class Graph:
                 clause, args = self._buildClause('text', text, \
                     comparator='LIKE')
             queryparts.append(clause)
-            queryargs.append(queryargs)
+            queryargs += args
         if url is not None:
             clause, args = self._buildClause('url', url)
             queryparts.append(clause)
-            queryargs.append(queryargs)
+            queryargs += args
         if date is not None:
             clause, args = self._buildClause('date', date)
             queryparts.append(clause)
-            queryargs.append(queryargs)
+            queryargs += args
 
         if len(queryparts) < 1:
             return self.getAnalysis(type=type, type_data=type_data, relevance=relevance)
@@ -191,7 +191,8 @@ class Graph:
             return None, None
 
         if type(values) is list:
-            items = ('%s%s?' % (field, comparator)*len(values)
+            # Testing just one field and value:
+            items = ['%s%s?' % (field, comparator)]*len(values)
             clause = '(%s)' % (' OR '.join(items))
             args = tuple(values)
         else:
