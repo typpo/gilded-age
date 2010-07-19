@@ -99,7 +99,7 @@ class Graph:
             queryparts.append(clause)
             queryargs += args
             
-        if relevance is None and type is None and result_data is None:
+        if relevance is None and result_type is None and result_data is None:
             # Don't need to join tables because we're just looking at articles.
             query = 'SELECT * FROM articles'
             if len(queryparts) > 0:
@@ -215,7 +215,7 @@ class Graph:
 
         return db.articles.processAll(ret)
 
-    def getAnalysis(self, article_id=None, type=None, result_data=None, relevance=None):
+    def getAnalysis(self, article_id=None, result_type=None, result_data=None, relevance=None):
         """Given an article, return analysis associated with it.
 
         Except for noted below, all parameters are tested for exact equality:
@@ -257,9 +257,9 @@ class Graph:
                     # Get the relations linked to the article.
                     queryparts = []
                     queryargs = []
-                    if type is not None:
+                    if result_type is not None:
                         queryparts.append('type=?')
-                        queryargs.append(type)
+                        queryargs.append(result_type)
                     if result_data is not None:
                         queryparts.append('data LIKE ?')
                         queryargs.append(result_data)
