@@ -42,6 +42,7 @@ class Graph:
         Except for noted below, all parameters are tested for exact equality:
         title, summary, text -- specifies data is LIKE
 
+        TODO sql join
         TODO pass in dict instead of params. Dict keys should be validated"""
 
         cur = self.conn.cursor()
