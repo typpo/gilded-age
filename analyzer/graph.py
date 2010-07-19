@@ -36,13 +36,12 @@ class Graph:
                 E.append((articlenode, entitynode))
 
     def getArticles(self, id=None, source=None, alignment=None, page=None, title=None, summary=None, \
-        text=None, url=None, date=None, relevance=None, type=None, type_data=None):
+        text=None, url=None, date=None, relevance=None, result_type=None, result_data=None):
         """Get articles based on a number of article and relationship parameters.
 
         Except for noted below, all parameters are tested for exact equality:
         title, summary, text -- specifies data is LIKE
 
-        TODO sql join
         TODO pass in dict instead of params. Dict keys should be validated"""
 
         cur = self.conn.cursor()
@@ -77,10 +76,15 @@ class Graph:
             queryparts.append(clause)
             queryargs += args
         if text is not None:
-            if text == 'True':
-                # Ensure that there is text in this article.
-                clause, args = self._buildClause('text', 'None', \
-                    comparator='!=')
+            if type(text)==bool:
+                if text:
+                    # Ensure that there is text in this article.
+                    clause, args = self._buildClause('text', 'None', \
+                        comparator='!=')
+                else:
+                    # No text
+                    clause, args = self._buildClause('text', 'None', \
+                        comparator='==')
             else:
                 clause, args = self._buildClause('text', text, \
                     comparator='LIKE')
@@ -94,31 +98,48 @@ class Graph:
             clause, args = self._buildClause('date', date)
             queryparts.append(clause)
             queryargs += args
-
-        if len(queryparts) > 0:
+            
+        if relevance is None and type is None and result_data is None:
+            # Don't need to join tables because we're just looking at articles.
             query = 'SELECT * FROM articles'
-            query += ' WHERE '
+            if len(queryparts) > 0:
+                query += ' WHERE '
+                query += ' AND '.join(queryparts)
+            
+            # Execute articles only query
+            cur.execute(query, queryargs)
+            articles = db.articles.processAll(cur.fetchall())
+        else:
+            # Need to join tables because we're looking at analysis results as well
+            query = 'SELECT * FROM articles INNER JOIN calais_results ON articles.id=calais_results.article_id INNER JOIN calais_items ON calais_results.relation_id=calais_items.id WHERE '
+            # TODO add query parts - could be further optimized if relevance is separate from type, result_data
+            if result_type is not None:
+                clause, args = self._buildClause('type', result_type)
+                queryparts.append(clause)
+                queryargs += args
+            if result_data is not None:
+                clause, args = self._buildClause('data', result_data, \
+                    comparator='LIKE')
+                queryparts.append(clause)
+                queryargs += args
+            if relevance is not None:
+                clause, args = self._buildClause('relevance', relevance, \
+                    comparator='>=')
+                queryparts.append(clause)
+                queryargs += args
+
+            # Build query
             query += ' AND '.join(queryparts)
 
-            # Execute articles query
+            # Execute query on table join
             cur.execute(query, queryargs)
             articles = db.articles.processAll(cur.fetchall())
 
-            # See if we need to get analysis
-            if relevance is None and type is None and type_data is None:
-                return articles
+            # TODO group by article id, because we throw away other article result metadata (which causes duplication of articles)
 
-            # Apply analysis parameters
-            # TODO we assume that some articles are returned
-            articleids = [article.id for article in articles]
-        else:
-            # No article constraints
-            articleids = None
+        return articles
 
-        return self.getArticlesWithRelationship(article_id=articleids, type=type,\
-            type_data=type_data, relevance=relevance)
-
-    def getArticlesWithRelationship(self, article_id=None, type=None, type_data=None,\
+    def getArticlesWithRelationship(self, article_id=None, result_type=None, result_data=None,\
         relevance=None):
         """Find articles that match certain parameters"""
 
@@ -130,12 +151,12 @@ class Graph:
                 # Get the relations linked to the article.
                 queryparts = []
                 queryargs = ()
-                if type is not None:
-                    clause, args = self._buildClause('type', type)
+                if result_type is not None:
+                    clause, args = self._buildClause('type', result_type)
                     queryparts.append(clause)
                     queryargs += args
-                if type_data is not None:
-                    clause, args = self._buildClause('data', type_data, \
+                if result_data is not None:
+                    clause, args = self._buildClause('data', result_data, \
                         comparator='LIKE')
                     queryparts.append(clause)
                     queryargs += args
@@ -194,12 +215,12 @@ class Graph:
 
         return db.articles.processAll(ret)
 
-    def getAnalysis(self, article_id=None, type=None, type_data=None, relevance=None):
+    def getAnalysis(self, article_id=None, type=None, result_data=None, relevance=None):
         """Given an article, return analysis associated with it.
 
         Except for noted below, all parameters are tested for exact equality:
         relevance -- specifies score of at least X
-        type_data -- specifies data is LIKE
+        result_data -- specifies data is LIKE
         """
 
         cur = self.conn.cursor()
@@ -239,9 +260,9 @@ class Graph:
                     if type is not None:
                         queryparts.append('type=?')
                         queryargs.append(type)
-                    if type_data is not None:
+                    if result_data is not None:
                         queryparts.append('data LIKE ?')
-                        queryargs.append(type_data)
+                        queryargs.append(result_data)
 
                     # set id
                     queryparts.append('id=?')
@@ -268,17 +289,17 @@ class Graph:
             return None, None
 
         if type(values) is list:
-            items = ['%s%s?' % (field, comparator)]*len(values)
+            items = ['%s %s ?' % (field, comparator)]*len(values)
             clause = '(%s)' % (' OR '.join(items))
             args = tuple(values)
         else:
-            clause = '%s%s?' % (field, comparator)
+            clause = '%s %s ?' % (field, comparator)
             args = (values,)
 
         return clause, args
 
     #
-    # --- OLDER FUNCTIONS ---
+    # --- OLDER FUNCTIONS that work on single articles. ---
     #
 
     def getRelatedArticles(self, article):
