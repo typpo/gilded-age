@@ -1,3 +1,1 @@
 https://docs.google.com/document/edit?id=1_rdtlmmPQDbRolL0nOpiIuLGH1XG1OLAypffDcdCLLI&hl=en&authkey=CPn3gZcI
-
-SELECT * FROM articles INNER JOIN calais_results ON articles.id=calais_results.article_id INNER JOIN calais_items ON calais_results.relation_id=calais_items.id WHERE alignment='north' AND type='Person' AND data='Lincoln';
