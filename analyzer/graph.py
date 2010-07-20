@@ -35,14 +35,16 @@ class Graph:
                 V.add(entitynode)
                 E.append((articlenode, entitynode))
 
-    def getArticles(self, id=None, source=None, alignment=None, page=None, title=None, summary=None, \
-        text=None, url=None, date=None, relevance=None, result_type=None, result_data=None):
+    def getArticles(self, id=None, source=None, alignment=None, page=None, title=None, \
+        summary=None, text=None, url=None, date=None, relevance=None, result_type=None, \
+        result_data=None):
         """Get articles based on a number of article and relationship parameters.
 
         Except for noted below, all parameters are tested for exact equality:
         title, summary, text -- specifies data is LIKE
 
-        TODO pass in dict instead of params. Dict keys should be validated"""
+        TODO specify date comparators
+        """
 
         cur = self.conn.cursor()
 
@@ -240,7 +242,7 @@ class Graph:
             if analyzer == 'CALAIS':
                 ret = []
                 for relation in relations:
-                    # Find results concerning the same relation and order by high scores.
+                    # Find results for the same relation and order by high scores.
                     # TODO needs to be improved
                     query = 'SELECT * from calais_results WHERE relation_id=? order by relevance'
                     cur.execute(query, (relation.id,))
