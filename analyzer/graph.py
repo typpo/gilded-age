@@ -14,25 +14,6 @@ class Graph:
     def __init__(self, conn):
         self.conn = conn
 
-    def generateGraph(self, articles):
-        """Takes a list of articles, creates and returns a graph object"""
-        G = nx.Graph()
-
-        for article in articles:
-            # Get analysis
-            entities = self.getEntities(article)
-            category = self.getCategories(article)[0]
-
-            #articlenode = Node(article)
-            #articlenode.category = category
-            G.add_node(article.title)
-
-            for entity in entities:
-                entitynode = Node(entity)
-                entitynode.category = category
-                V.add(entitynode)
-                E.append((articlenode, entitynode))
-
     def getArticles(self, id=None, source=None, alignment=None, page=None, title=None, \
         summary=None, text=None, url=None, date=None, relevance=None, result_type=None, \
         result_data=None, graph=False, limit=None):
@@ -133,6 +114,8 @@ class Graph:
             # Build query
             query += ' AND '.join(queryparts)
 
+            # TODO Order by causes problems now that the graph option can skip here 
+            # without adding query parts.
             query += ' ORDER BY relevance'
             if limit is not None:
                 query += ' LIMIT ' + str(int(limit))
@@ -143,62 +126,66 @@ class Graph:
             articles = db.articles.processAll(results)
 
             if graph:
-                # TODO outsource this
-
-                # Output a graph of relationships
-                print 'Building graph...'
-                southnodes = []
-                northnodes = []
-                linknodes = []
-                edges = []
-                labels= {}
-                for result in results:
-                    articletitle = result[4]
-                    link = result[17]
-                    side = result[2]
-                    if side=='north':
-                        northnodes.append(articletitle)
-                    else:
-                        southnodes.append(articletitle)
-                    linknodes.append(link)
-                    labels[link] = link
-                    labels[articletitle] = ''
-                    edges.append((articletitle,link))
-
-                # Import graphing libraries
-                import matplotlib
-                # Switch default output from X11
-                matplotlib.use('Agg')
-
-                import networkx as nx
-                import matplotlib.pyplot as plt
-
-                # Draw this graph
-                print 'Drawing figure... %d results' % len(results)
-                G = nx.Graph()
-                G.add_nodes_from(southnodes)
-                G.add_nodes_from(northnodes)
-                G.add_nodes_from(linknodes)
-                G.add_edges_from(edges)
-
-                print 'Computing layout...'
-                pos=nx.spring_layout(G)
-
-                print 'north...'
-                nx.draw_networkx_nodes(G, pos, nodelist=northnodes, node_color='blue', node_size=90, alpha=.5)
-                print 'south...'
-                nx.draw_networkx_nodes(G, pos, nodelist=southnodes, node_color='red', node_size=90, alpha=.5)
-                print 'links...'
-                nx.draw_networkx_nodes(G, pos, nodelist=linknodes, node_color='green', node_size=90, alpha=.5)
-                print 'edges...'
-                nx.draw_networkx_edges(G, pos, edgelist=edges)
-                print 'labels...'
-                nx.draw_networkx_labels(G, pos, labels, font_size=8, font_color='#ff6600')
-                print 'Saving figure...'
-                plt.axis('tight')
-                plt.savefig('outputgraph.png')
+                self.buildGraph(results)
 
         return articles
+
+    def buildGraph(self, results):
+        """Creates a graph of results.
+        results -- the rows of a join between the three db tables
+        """
+        # Output a graph of relationships
+        print 'Building graph...'
+        southnodes = []
+        northnodes = []
+        linknodes = []
+        edges = []
+        labels= {}
+        for result in results:
+            articletitle = result[4]
+            link = result[17]
+            side = result[2]
+            if side=='north':
+                northnodes.append(articletitle)
+            else:
+                southnodes.append(articletitle)
+            linknodes.append(link)
+            labels[link] = link
+            labels[articletitle] = ''
+            edges.append((articletitle,link))
+
+        # Import graphing libraries
+        import matplotlib
+        # Switch default output from X11
+        matplotlib.use('Agg')
+
+        import networkx as nx
+        import matplotlib.pyplot as plt
+
+        # Draw this graph
+        print 'Drawing figure... %d results' % len(results)
+        G = nx.Graph()
+        G.add_nodes_from(southnodes)
+        G.add_nodes_from(northnodes)
+        G.add_nodes_from(linknodes)
+        G.add_edges_from(edges)
+
+        print 'Computing layout...'
+        pos=nx.spring_layout(G)
+
+        print 'north...'
+        nx.draw_networkx_nodes(G, pos, nodelist=northnodes, node_color='blue', node_size=90, alpha=.5)
+        print 'south...'
+        nx.draw_networkx_nodes(G, pos, nodelist=southnodes, node_color='red', node_size=90, alpha=.5)
+        print 'links...'
+        nx.draw_networkx_nodes(G, pos, nodelist=linknodes, node_color='green', node_size=90, alpha=.5)
+        print 'edges...'
+        nx.draw_networkx_edges(G, pos, edgelist=edges)
+        print 'labels...'
+        nx.draw_networkx_labels(G, pos, labels, font_size=8, font_color='#ff6600')
+        print 'Saving figure...'
+        plt.axis('tight')
+        plt.savefig('outputgraph.png')
 
     def getAnalysis(self, article_id=None, result_type=None, result_data=None, relevance=None):
         """Given an article, return analysis associated with it.

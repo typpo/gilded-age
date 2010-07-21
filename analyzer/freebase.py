@@ -20,12 +20,15 @@ CALAIS_TYPE_MAPPING = {
 
 class FreebaseLinker:
     """Resolves ambiguous entities using Freebase
-    Supports Calais results for now."""
+    """
 
     def resolve(self, entity, entity_type=None):
-        # Check if entity has known type
+        # Check if entity has known type.
+        # This is done for disambiguation purposes, as it constrains Freebase's search.
         resolved_type = None
         if entity_type is not None and entity_type in CALAIS_TYPE_MAPPING:
+            # (support only for calais mapping only now)
             resolved_type = CALAIS_TYPE_MAPPING[entity_type]
 
+        # Send freebase search with resolved type
         freebase.search(query=entity, type=resolved_type)
