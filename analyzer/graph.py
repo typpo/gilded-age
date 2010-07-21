@@ -16,18 +16,16 @@ class Graph:
 
     def generateGraph(self, articles):
         """Takes a list of articles, creates and returns a graph object"""
-        V = []
-        E = []
-        G = (V, E)
+        G = nx.Graph()
 
         for article in articles:
             # Get analysis
             entities = self.getEntities(article)
             category = self.getCategories(article)[0]
 
-            articlenode = Node(article)
-            articlenode.category = category
-            V.add(articlenode)
+            #articlenode = Node(article)
+            #articlenode.category = category
+            G.add_node(article.title)
 
             for entity in entities:
                 entitynode = Node(entity)
@@ -37,7 +35,7 @@ class Graph:
 
     def getArticles(self, id=None, source=None, alignment=None, page=None, title=None, \
         summary=None, text=None, url=None, date=None, relevance=None, result_type=None, \
-        result_data=None):
+        result_data=None, graph=False, limit=None):
         """Get articles based on a number of article and relationship parameters.
 
         Except for noted below, all parameters are tested for exact equality:
@@ -107,6 +105,8 @@ class Graph:
             if len(queryparts) > 0:
                 query += ' WHERE '
                 query += ' AND '.join(queryparts)
+            if limit is not None:
+                query += ' LIMIT ' + int(limit)
             
             # Execute articles only query
             cur.execute(query, queryargs)
@@ -133,11 +133,70 @@ class Graph:
             # Build query
             query += ' AND '.join(queryparts)
 
+            query += ' ORDER BY relevance'
+            if limit is not None:
+                query += ' LIMIT ' + str(int(limit))
+
             # Execute query on table join
             cur.execute(query, queryargs)
-            articles = db.articles.processAll(cur.fetchall())
+            results = cur.fetchall()
+            articles = db.articles.processAll(results)
 
-            # TODO group by article id, because we throw away other article result metadata (which causes duplication of articles)
+            if graph:
+                # TODO outsource this
+
+                # Output a graph of relationships
+                print 'Building graph...'
+                southnodes = []
+                northnodes = []
+                linknodes = []
+                edges = []
+                labels= {}
+                for result in results:
+                    articletitle = result[4]
+                    link = result[17]
+                    side = result[2]
+                    if side=='north':
+                        northnodes.append(articletitle)
+                    else:
+                        southnodes.append(articletitle)
+                    linknodes.append(link)
+                    labels[link] = link
+                    labels[articletitle] = ''
+                    edges.append((articletitle,link))
+
+                # Import graphing libraries
+                import matplotlib
+                # Switch default output from X11
+                matplotlib.use('Agg')
+
+                import networkx as nx
+                import matplotlib.pyplot as plt
+
+                # Draw this graph
+                print 'Drawing figure... %d results' % len(results)
+                G = nx.Graph()
+                G.add_nodes_from(southnodes)
+                G.add_nodes_from(northnodes)
+                G.add_nodes_from(linknodes)
+                G.add_edges_from(edges)
+
+                print 'Computing layout...'
+                pos=nx.spring_layout(G)
+
+                print 'north...'
+                nx.draw_networkx_nodes(G, pos, nodelist=northnodes, node_color='blue', node_size=90, alpha=.5)
+                print 'south...'
+                nx.draw_networkx_nodes(G, pos, nodelist=southnodes, node_color='red', node_size=90, alpha=.5)
+                print 'links...'
+                nx.draw_networkx_nodes(G, pos, nodelist=linknodes, node_color='green', node_size=90, alpha=.5)
+                print 'edges...'
+                nx.draw_networkx_edges(G, pos, edgelist=edges)
+                print 'labels...'
+                nx.draw_networkx_labels(G, pos, labels, font_size=8, font_color='#ff6600')
+                print 'Saving figure...'
+                plt.axis('tight')
+                plt.savefig('outputgraph.png')
 
         return articles
 
