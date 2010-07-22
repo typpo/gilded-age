@@ -4,8 +4,12 @@ import db.articles
 import db.calaisitems
 import db.calaisresults
 
-# SQL comparators to accept in api calls
+# SQL comparators to accept in api calls.
 VALID_SQL_COMPARATORS = ['=', '!=', '<', '<=', '>', '>=', 'LIKE']
+
+# Base query for combining all analysis tables.  Should include all the column
+# names that we support in getArticles and _buildQueryFromArgs
+BASE_QUERY = 'SELECT * FROM articles INNER JOIN calais_results ON articles.id=calais_results.article_id INNER JOIN calais_items ON calais_results.relation_id=calais_items.id'
 
 class Graph:
     """Reads database and creates a graph object, and other basic analytics
@@ -27,10 +31,42 @@ class Graph:
 
         cur = self.conn.cursor()
 
-        # Prepare articles query
+        if relevance is None and result_type is None and result_data is None:
+            # Don't need to join tables because we're just looking at articles.
+            query = 'SELECT * FROM articles'
+            if len(queryparts) > 0:
+                query += ' WHERE '
+                query += ' AND '.join(queryparts)
+            if limit is not None:
+                query += ' LIMIT ' + int(limit)
+            
+            # Execute articles only query
+            cur.execute(query, queryargs)
+            articles = db.articles.processAll(cur.fetchall())
+        else:
+
+            # Execute query on table join
+            cur.execute(query, queryargs)
+            results = cur.fetchall()
+            articles = db.articles.processAll(results)
+
+            if graph:
+                self.buildGraph(results)
+
+        return articles
+
+    def _buildQueryFromArgs(self, **kwargs):
+        """Builds an SQL query from named parameters.
+        This can handle any fields in all 3 (current) analysis tables as 
+        named arguments.  Arguments are the same as table column names,
+        with the following exceptions:
+            calaisitems.type --> result_type
+            calaisitems.data --> result_data
+        """
+        # Build queries for articles table:
         queryparts = []
         queryargs = ()
-        if id is not None:
+        if 'id' is not None:
             clause, args = self._buildClause('id', id)
             queryparts.append(clause)
             queryargs += args
@@ -79,56 +115,35 @@ class Graph:
             clause, args = self._buildClause('date', date)
             queryparts.append(clause)
             queryargs += args
-            
-        if relevance is None and result_type is None and result_data is None:
-            # Don't need to join tables because we're just looking at articles.
-            query = 'SELECT * FROM articles'
-            if len(queryparts) > 0:
-                query += ' WHERE '
-                query += ' AND '.join(queryparts)
-            if limit is not None:
-                query += ' LIMIT ' + int(limit)
-            
-            # Execute articles only query
-            cur.execute(query, queryargs)
-            articles = db.articles.processAll(cur.fetchall())
-        else:
-            # Need to join tables because we're looking at analysis results as well
-            query = 'SELECT * FROM articles INNER JOIN calais_results ON articles.id=calais_results.article_id INNER JOIN calais_items ON calais_results.relation_id=calais_items.id WHERE '
-            # TODO add query parts - could be further optimized if relevance is separate from type, result_data
-            if result_type is not None:
-                clause, args = self._buildClause('type', result_type)
-                queryparts.append(clause)
-                queryargs += args
-            if result_data is not None:
-                clause, args = self._buildClause('data', result_data, \
-                    comparator='LIKE')
-                queryparts.append(clause)
-                queryargs += args
-            if relevance is not None:
-                clause, args = self._buildClause('relevance', relevance, \
-                    comparator='>=')
-                queryparts.append(clause)
-                queryargs += args
 
-            # Build query
-            query += ' AND '.join(queryparts)
 
-            # TODO Order by causes problems now that the graph option can skip here 
-            # without adding query parts.
-            query += ' ORDER BY relevance'
-            if limit is not None:
-                query += ' LIMIT ' + str(int(limit))
+        # Build query for calais_items
+        if result_type is not None:
+            clause, args = self._buildClause('type', result_type)
+            queryparts.append(clause)
+            queryargs += args
+        if result_data is not None:
+            clause, args = self._buildClause('data', result_data, \
+                comparator='LIKE')
+            queryparts.append(clause)
+            queryargs += args
 
-            # Execute query on table join
-            cur.execute(query, queryargs)
-            results = cur.fetchall()
-            articles = db.articles.processAll(results)
+        # Build query for calais_results
+        if relevance is not None:
+            clause, args = self._buildClause('relevance', relevance, \
+                comparator='>=')
+            queryparts.append(clause)
+            queryargs += args
 
-            if graph:
-                self.buildGraph(results)
+        # Build query
+        query = BASE_QUERY
+        query += ' AND '.join(queryparts)
 
-        return articles
+        # TODO Order by causes problems now that the graph option can skip here 
+        # without adding query parts.
+        query += ' ORDER BY relevance'
+        if limit is not None:
+            query += ' LIMIT ' + str(int(limit))
 
     def buildGraph(self, results):
         """Creates a graph of results.
@@ -171,18 +186,18 @@ class Graph:
         G.add_edges_from(edges)
 
         print 'Computing layout...'
-        pos=nx.spring_layout(G)
+        pos = nx.spring_layout(G)
 
         print 'north...'
-        nx.draw_networkx_nodes(G, pos, nodelist=northnodes, node_color='blue', node_size=90, alpha=.5)
+        nx.draw_networkx_nodes(G, pos, nodelist=northnodes, node_color='blue', node_size=90, alpha=.2)
         print 'south...'
-        nx.draw_networkx_nodes(G, pos, nodelist=southnodes, node_color='red', node_size=90, alpha=.5)
+        nx.draw_networkx_nodes(G, pos, nodelist=southnodes, node_color='red', node_size=90, alpha=.2)
         print 'links...'
-        nx.draw_networkx_nodes(G, pos, nodelist=linknodes, node_color='green', node_size=90, alpha=.5)
+        nx.draw_networkx_nodes(G, pos, nodelist=linknodes, node_color='green', node_size=90, alpha=.2)
         print 'edges...'
         nx.draw_networkx_edges(G, pos, edgelist=edges)
         print 'labels...'
-        nx.draw_networkx_labels(G, pos, labels, font_size=8, font_color='#ff6600')
+        nx.draw_networkx_labels(G, pos, labels, font_size=8, font_color='#ee5500')
         print 'Saving figure...'
         plt.axis('tight')
         plt.savefig('outputgraph.png')
