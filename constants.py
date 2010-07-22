@@ -21,4 +21,10 @@ ENABLED_ANALYZERS = ['CALAIS']
 ### Calais consts
 
 # Settings for calais analyzer
-CALAIS_CONFIG = 'analyzer/calais.cfg'
+CALAIS_CONFIG = 'cfg/calais.cfg'
+
+
+### Graph consts
+
+# Settings
+GRAPH_CONFIG = 'cfg/graph.cfg'

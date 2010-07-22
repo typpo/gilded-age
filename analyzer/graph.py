@@ -1,4 +1,5 @@
 from node import Node
+from ConfigParser import ConfigParser
 import constants
 import db.articles
 import db.calaisitems
@@ -7,9 +8,12 @@ import db.calaisresults
 # SQL comparators to accept in api calls.
 VALID_SQL_COMPARATORS = ['=', '!=', '<', '<=', '>', '>=', 'LIKE']
 
-# Base query for combining all analysis tables.  Should include all the column
-# names that we support in getArticles and _buildQueryFromArgs
-BASE_QUERY = 'SELECT * FROM articles INNER JOIN calais_results ON articles.id=calais_results.article_id INNER JOIN calais_items ON calais_results.relation_id=calais_items.id'
+
+"""Loads OpenCalais key from settings file"""
+config = ConfigParser()
+config.readfp(open(constants.GRAPH_CONFIG))
+VALID_SQL_COLUMNS  = config.get('database', 'cols').split(',')
+BASE_QUERY = config.get('database', 'base')
 
 class Graph:
     """Reads database and creates a graph object, and other basic analytics
@@ -27,107 +31,67 @@ class Graph:
         TODO specify date comparators
         """
 
-        query, queryargs = self._buildQueryFromArgs(kwargs)
+        query, queryargs = self._buildQueryFromArgs(**kwargs)
+        print query
+        print queryargs
 
         # Execute query on table join
         cur = self.conn.cursor()
         cur.execute(query, queryargs)
         results = cur.fetchall()
-        articles = db.articles.processAll(results)
 
         if graph:
             self.buildGraph(results)
 
-        return articles
+        return db.articles.processAll(results)
 
     def _buildQueryFromArgs(self, **kwargs):
         """Builds an SQL query from named parameters.
         This can handle any fields in all 3 (current) analysis tables as 
-        named arguments.  Arguments are the same as table column names,
-        with the following exceptions:
-            calaisitems.type --> result_type
-            calaisitems.data --> result_data
+        named arguments, as specified in cfg/graph.cfg.
+
+        To specify a comparator for an argument, set the argument's name
+        prepended with a "_", eg. "_data='LIKE'"
+        
+        Default comparator is equals (=)
         """
         # Build queries for articles table:
         queryparts = []
         queryargs = ()
-        if 'id' in kwargs:
-            clause, args = self._buildClause('id', kwargs['id'])
-            queryparts.append(clause)
-            queryargs += args
-        if 'source' in kwargs:
-            clause, args = self._buildClause('source', kwargs['source'])
-            queryparts.append(clause)
-            queryargs += args
-        if 'alignment' in kwargs:
-            clause, args = self._buildClause('alignment', kwargs['alignment'])
-            queryparts.append(clause)
-            queryargs += args
-        if 'page' in kwargs:
-            clause, args = self._buildClause('page', kwargs['page'])
-            queryparts.append(clause)
-            queryargs += args
-        if 'title' in kwargs:
-            clause, args = self._buildClause('title', kwargs['title'], \
-                comparator='LIKE')
-            queryparts.append(clause)
-            queryargs += args
-        if 'summary' in kwargs:
-            clause, args = self._buildClause('summary', kwargs['summary'], \
-                comparator='LIKE')
-            queryparts.append(clause)
-            queryargs += args
-        if 'text' in kwargs:
-            if type(text)==bool:
-                if text:
-                    # Ensure that there is text in this article.
-                    clause, args = self._buildClause('text', 'None', \
-                        comparator='!=')
-                else:
-                    # No text
-                    clause, args = self._buildClause('text', 'None', \
-                        comparator='==')
-            else:
-                clause, args = self._buildClause('text', kwargs['text'], \
-                    comparator='LIKE')
-            queryparts.append(clause)
-            queryargs += args
-        if 'url' in kwargs:
-            clause, args = self._buildClause('url', kwargs['url'])
-            queryparts.append(clause)
-            queryargs += args
-        if 'date' in kwargs:
-            clause, args = self._buildClause('date', kwargs['date'])
-            queryparts.append(clause)
-            queryargs += args
+        for arg in kwargs:
+            if arg not in VALID_SQL_COLUMNS:
+                continue
 
-        # Build query for calais_items
-        if 'result_type' in kwargs:
-            clause, args = self._buildClause('type', kwargs['result_type'])
-            queryparts.append(clause)
-            queryargs += args
-        if 'result_data' in kwargs:
-            clause, args = self._buildClause('data', kwargs['result_data'], \
-                comparator='LIKE')
-            queryparts.append(clause)
-            queryargs += args
+            # See if a specific comparator was supplied
+            comparator_key = '_' + arg
+            override_comparator = '=' 
+            if comparator_key in kwargs:
+                override_comparator = kwargs[comparator_key]
+                if override_comparator not in VALID_SQL_COMPARATORS:
+                    print 'Invalid comparator %s for column %s' % \
+                        (override_comparator, arg)
+                    return None, None
 
-        # Build query for calais_results
-        if 'relevance' in kwargs:
-            clause, args = self._buildClause('relevance', kwargs['relevance'], \
-                comparator='>=')
+            clause, qargs = self._buildClause(arg, kwargs[arg],\
+                comparator=override_comparator)
             queryparts.append(clause)
-            queryargs += args
+            queryargs += qargs
 
         # Build query
         query = BASE_QUERY
+        if len(queryparts) > 0:
+            query += ' WHERE '
         query += ' AND '.join(queryparts)
 
-        # TODO Order by causes problems now that the graph option can skip here 
-        # without adding query parts.
-        query += ' ORDER BY relevance'
-        if limit is not None:
-            query += ' LIMIT ' + str(int(limit))
+        if len(queryparts) > 0:
+            # TODO Order by causes problems now that the graph option can skip here 
+            # without adding query parts.
+            query += ' ORDER BY relevance'
+
+        if 'limit' in kwargs:
+            query += ' LIMIT ' + str(int(kwargs['limit']))
+
+        return query, queryargs
 
     def buildGraph(self, results):
         """Creates a graph of results.
@@ -259,9 +223,6 @@ class Graph:
 
         returns -- (clause of sql query, parameter-bound arguments)
         """
-        if comparator not in VALID_SQL_COMPARATORS:
-            print 'Bad comparator "%s": not allowed.' % (comparator)
-            return None, None
 
         if type(values) is list:
             items = ['%s %s ?' % (field, comparator)]*len(values)
