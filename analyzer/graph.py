@@ -29,21 +29,32 @@ class Graph:
         """
 
         query, queryargs = self._buildQueryFromArgs(**kwargs)
-        print query
-        print queryargs
 
         # Execute query on table join
         cur = self.conn.cursor()
         cur.execute(query, queryargs)
         results = cur.fetchall()
 
-        # TODO for each link found, find the same article but with other links
+        # TODO for each link found, find the same article's other links
         # Then, choose some of the other links, and graph them.
+
+        articleresults = db.articles.processAll(results)
 
         if graph:
             self.buildGraph(results)
 
         return db.articles.processAll(results)
+
+    def _getRelatedAnalysis(self, articlerestults):
+        """Gets entities of all articles"""
+
+        total = len(articleresults)
+        print 'Grabbing analysis for %d results...' % total
+        for article in articleresults:
+            i = articleresults.index(article)
+            percent = (float(i) / float(total))*100
+            print '%d%%' % percent
+            self.getEntities(article)
 
     def _buildQueryFromArgs(self, **kwargs):
         """Builds an SQL query from named parameters.
@@ -119,6 +130,8 @@ class Graph:
         labels= {}
         for result in results:
             articletitle = result[4]
+            if '\n' in articletitle:
+                continue
             link = result[17]
             side = result[2]
             if side=='north':
@@ -147,7 +160,8 @@ class Graph:
         G.add_edges_from(edges)
 
         print 'Computing layout...'
-        pos = nx.spring_layout(G)
+        #pos = nx.spring_layout(G)
+        pos = nx.graphviz_layout(G)
 
         print 'north...'
         nx.draw_networkx_nodes(G, pos, nodelist=northnodes, node_color='blue',\
@@ -303,6 +317,7 @@ class Graph:
         for analyzer in constants.ENABLED_ANALYZERS:
             if analyzer == 'CALAIS':
                 # Find results linked to this article.
+                # TODO Join this with below
                 query = 'SELECT * from calais_results WHERE article_id=?'
                 cur.execute(query, (article.id,))
                 results = db.calaisresults.processAll(cur.fetchall())
