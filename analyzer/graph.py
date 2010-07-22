@@ -8,8 +8,7 @@ import db.calaisresults
 # SQL comparators to accept in api calls.
 VALID_SQL_COMPARATORS = ['=', '!=', '<', '<=', '>', '>=', 'LIKE']
 
-
-"""Loads OpenCalais key from settings file"""
+# Load graph construction/analysis settings from configuration file.
 config = ConfigParser()
 config.readfp(open(constants.GRAPH_CONFIG))
 VALID_SQL_COLUMNS  = config.get('database', 'cols').split(',')
@@ -25,10 +24,8 @@ class Graph:
     def getArticles(self, graph, **kwargs):
         """Get articles based on a number of article and relationship parameters.
 
-        Except for noted below, all parameters are tested for exact equality:
-        title, summary, text -- specifies data is LIKE
-
-        TODO specify date comparators
+        To specify a comparator for a given column, set '_columnname', where 
+        columnname is the name of the column.
         """
 
         query, queryargs = self._buildQueryFromArgs(**kwargs)
@@ -39,6 +36,9 @@ class Graph:
         cur = self.conn.cursor()
         cur.execute(query, queryargs)
         results = cur.fetchall()
+
+        # TODO for each link found, find the same article but with other links
+        # Then, choose some of the other links, and graph them.
 
         if graph:
             self.buildGraph(results)
@@ -81,17 +81,30 @@ class Graph:
         query = BASE_QUERY
         if len(queryparts) > 0:
             query += ' WHERE '
-        query += ' AND '.join(queryparts)
+            query += ' AND '.join(queryparts)
 
-        if len(queryparts) > 0:
-            # TODO Order by causes problems now that the graph option can skip here 
-            # without adding query parts.
-            query += ' ORDER BY relevance'
+        query += ' ORDER BY relevance'
 
         if 'limit' in kwargs:
             query += ' LIMIT ' + str(int(kwargs['limit']))
 
         return query, queryargs
+
+    def _buildClause(self, field, values, comparator='='):
+        """ORs together values of a field to construct a sql where clause
+
+        returns -- (clause of sql query, parameter-bound arguments)
+        """
+
+        if type(values) is list:
+            items = ['%s %s ?' % (field, comparator)]*len(values)
+            clause = '(%s)' % (' OR '.join(items))
+            args = tuple(values)
+        else:
+            clause = '%s %s ?' % (field, comparator)
+            args = (values,)
+
+        return clause, args
 
     def buildGraph(self, results):
         """Creates a graph of results.
@@ -218,21 +231,6 @@ class Graph:
                     ret.extend(relations)
         return ret
 
-    def _buildClause(self, field, values, comparator='='):
-        """OR's together values of a field to construct a sql where clause
-
-        returns -- (clause of sql query, parameter-bound arguments)
-        """
-
-        if type(values) is list:
-            items = ['%s %s ?' % (field, comparator)]*len(values)
-            clause = '(%s)' % (' OR '.join(items))
-            args = tuple(values)
-        else:
-            clause = '%s %s ?' % (field, comparator)
-            args = (values,)
-
-        return clause, args
 
     #
     # --- OLDER FUNCTIONS that work on single articles. ---
