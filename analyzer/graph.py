@@ -18,9 +18,7 @@ class Graph:
     def __init__(self, conn):
         self.conn = conn
 
-    def getArticles(self, id=None, source=None, alignment=None, page=None, title=None, \
-        summary=None, text=None, url=None, date=None, relevance=None, result_type=None, \
-        result_data=None, graph=False, limit=None):
+    def getArticles(self, graph, **kwargs):
         """Get articles based on a number of article and relationship parameters.
 
         Except for noted below, all parameters are tested for exact equality:
@@ -29,29 +27,16 @@ class Graph:
         TODO specify date comparators
         """
 
+        query, queryargs = self._buildQueryFromArgs(kwargs)
+
+        # Execute query on table join
         cur = self.conn.cursor()
+        cur.execute(query, queryargs)
+        results = cur.fetchall()
+        articles = db.articles.processAll(results)
 
-        if relevance is None and result_type is None and result_data is None:
-            # Don't need to join tables because we're just looking at articles.
-            query = 'SELECT * FROM articles'
-            if len(queryparts) > 0:
-                query += ' WHERE '
-                query += ' AND '.join(queryparts)
-            if limit is not None:
-                query += ' LIMIT ' + int(limit)
-            
-            # Execute articles only query
-            cur.execute(query, queryargs)
-            articles = db.articles.processAll(cur.fetchall())
-        else:
-
-            # Execute query on table join
-            cur.execute(query, queryargs)
-            results = cur.fetchall()
-            articles = db.articles.processAll(results)
-
-            if graph:
-                self.buildGraph(results)
+        if graph:
+            self.buildGraph(results)
 
         return articles
 
@@ -66,33 +51,33 @@ class Graph:
         # Build queries for articles table:
         queryparts = []
         queryargs = ()
-        if 'id' is not None:
-            clause, args = self._buildClause('id', id)
+        if 'id' in kwargs:
+            clause, args = self._buildClause('id', kwargs['id'])
             queryparts.append(clause)
             queryargs += args
-        if source is not None:
-            clause, args = self._buildClause('source', source)
+        if 'source' in kwargs:
+            clause, args = self._buildClause('source', kwargs['source'])
             queryparts.append(clause)
             queryargs += args
-        if alignment is not None:
-            clause, args = self._buildClause('alignment', alignment)
+        if 'alignment' in kwargs:
+            clause, args = self._buildClause('alignment', kwargs['alignment'])
             queryparts.append(clause)
             queryargs += args
-        if page is not None:
-            clause, args = self._buildClause('page', page)
+        if 'page' in kwargs:
+            clause, args = self._buildClause('page', kwargs['page'])
             queryparts.append(clause)
             queryargs += args
-        if title is not None:
-            clause, args = self._buildClause('title', title, \
+        if 'title' in kwargs:
+            clause, args = self._buildClause('title', kwargs['title'], \
                 comparator='LIKE')
             queryparts.append(clause)
             queryargs += args
-        if summary is not None:
-            clause, args = self._buildClause('summary', summary, \
+        if 'summary' in kwargs:
+            clause, args = self._buildClause('summary', kwargs['summary'], \
                 comparator='LIKE')
             queryparts.append(clause)
             queryargs += args
-        if text is not None:
+        if 'text' in kwargs:
             if type(text)==bool:
                 if text:
                     # Ensure that there is text in this article.
@@ -103,34 +88,33 @@ class Graph:
                     clause, args = self._buildClause('text', 'None', \
                         comparator='==')
             else:
-                clause, args = self._buildClause('text', text, \
+                clause, args = self._buildClause('text', kwargs['text'], \
                     comparator='LIKE')
             queryparts.append(clause)
             queryargs += args
-        if url is not None:
-            clause, args = self._buildClause('url', url)
+        if 'url' in kwargs:
+            clause, args = self._buildClause('url', kwargs['url'])
             queryparts.append(clause)
             queryargs += args
-        if date is not None:
-            clause, args = self._buildClause('date', date)
+        if 'date' in kwargs:
+            clause, args = self._buildClause('date', kwargs['date'])
             queryparts.append(clause)
             queryargs += args
-
 
         # Build query for calais_items
-        if result_type is not None:
-            clause, args = self._buildClause('type', result_type)
+        if 'result_type' in kwargs:
+            clause, args = self._buildClause('type', kwargs['result_type'])
             queryparts.append(clause)
             queryargs += args
-        if result_data is not None:
-            clause, args = self._buildClause('data', result_data, \
+        if 'result_data' in kwargs:
+            clause, args = self._buildClause('data', kwargs['result_data'], \
                 comparator='LIKE')
             queryparts.append(clause)
             queryargs += args
 
         # Build query for calais_results
-        if relevance is not None:
-            clause, args = self._buildClause('relevance', relevance, \
+        if 'relevance' in kwargs:
+            clause, args = self._buildClause('relevance', kwargs['relevance'], \
                 comparator='>=')
             queryparts.append(clause)
             queryargs += args
@@ -189,15 +173,19 @@ class Graph:
         pos = nx.spring_layout(G)
 
         print 'north...'
-        nx.draw_networkx_nodes(G, pos, nodelist=northnodes, node_color='blue', node_size=90, alpha=.2)
+        nx.draw_networkx_nodes(G, pos, nodelist=northnodes, node_color='blue',\
+            node_size=90, alpha=.2)
         print 'south...'
-        nx.draw_networkx_nodes(G, pos, nodelist=southnodes, node_color='red', node_size=90, alpha=.2)
+        nx.draw_networkx_nodes(G, pos, nodelist=southnodes, node_color='red',\
+            node_size=90, alpha=.2)
         print 'links...'
-        nx.draw_networkx_nodes(G, pos, nodelist=linknodes, node_color='green', node_size=90, alpha=.2)
+        nx.draw_networkx_nodes(G, pos, nodelist=linknodes, node_color='green',\
+            node_size=90, alpha=.2)
         print 'edges...'
         nx.draw_networkx_edges(G, pos, edgelist=edges)
         print 'labels...'
-        nx.draw_networkx_labels(G, pos, labels, font_size=8, font_color='#ee5500')
+        nx.draw_networkx_labels(G, pos, labels, font_size=8, \
+            font_color='#ee5500')
         print 'Saving figure...'
         plt.axis('tight')
         plt.savefig('outputgraph.png')
