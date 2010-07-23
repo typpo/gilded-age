@@ -74,11 +74,20 @@ class Graph:
         
         Default comparator is equals (=)
         """
+
+        # TODO build date expression
+
         # Build queries for articles table:
         queryparts = []
         queryargs = ()
         for arg in kwargs:
+            # Special fields
+            if arg=='limit' or (len(arg) > 0 and arg[0]=='_'):
+                continue
+
+            # Validate fields
             if arg not in VALID_SQL_COLUMNS:
+                print 'Invalid column will not be included in query:', arg
                 continue
 
             # See if a specific comparator was supplied
@@ -150,28 +159,25 @@ class Graph:
         edges = []
         labels= {}
         for result in results:
-            articletitle = result[4]
-            if '\n' in articletitle:
-                # graphviz has problems with this
-                articletitle = articletitle[:articletitle.find('\n')]
+            articleid = result[0]
             link = result[17].lower()
             side = result[2]
             if side=='north':
-                northnodes.append(articletitle)
+                northnodes.append(articleid)
             else:
-                southnodes.append(articletitle)
+                southnodes.append(articleid)
 
             # Add to graph
             linknodes.append(link)
-            edges.append((articletitle,link))
+            edges.append((articleid,link))
 
             # Set labels of nodes
             labels[link] = link
-            labels[articletitle] = ''
+            labels[articleid] = ''
 
             # Set size of nodes
             size[link] = size[link] + 1 if link in size else 1
-            size[articletitle] = size[articletitle] + 1 if articletitle in size else 1
+            size[articleid] = size[articleid] + 1 if articleid in size else 1
 
             # Set alignment
             if link not in sidecount:
@@ -201,11 +207,11 @@ class Graph:
         print 'north...'
         for node in northnodes:
             nx.draw_networkx_nodes(G, pos, nodelist=[node], node_color='blue',\
-                node_size=80, alpha=.2)
+                node_size=30, alpha=.5)
         print 'south...'
         for node in southnodes:
             nx.draw_networkx_nodes(G, pos, nodelist=[node], node_color='red',\
-                node_size=80, alpha=.2)
+                node_size=30, alpha=.5)
         print 'links...'
         for node in linknodes:
             nsouth = sidecount[node]['south']
@@ -215,12 +221,12 @@ class Graph:
             rgb_blue = (float(nnorth) / total) * 255
             hex = rgb_to_hex((rgb_red, 0, rgb_blue))
             nx.draw_networkx_nodes(G, pos, nodelist=[node], node_color=hex,\
-                node_size=80+30*size[node], alpha=.2)
+                node_size=80+30*size[node], alpha=.5)
         print 'edges...'
         nx.draw_networkx_edges(G, pos, edgelist=edges)
         print 'labels...'
         nx.draw_networkx_labels(G, pos, labels, font_size=8, \
-            font_color='#ee5500')
+            font_color='green')
         print 'Saving figure...'
         plt.axis('tight')
         plt.savefig('outputgraph.png')
