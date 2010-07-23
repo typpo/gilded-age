@@ -5,6 +5,14 @@ import db.articles
 import db.calaisitems
 import db.calaisresults
 
+# Import graphing libraries
+import matplotlib
+# Switch default output from X11
+matplotlib.use('Agg')
+
+import networkx as nx
+import matplotlib.pyplot as plt
+
 # SQL comparators to accept in api calls.
 VALID_SQL_COMPARATORS = ['=', '!=', '<', '<=', '>', '>=', 'LIKE']
 
@@ -122,37 +130,61 @@ class Graph:
         results -- the rows of a join between the three db tables
         """
         # Output a graph of relationships
+# TODO remove article nodes altogether and just reflect articles via color (red-purple-blue)
+# and size, then connect nodes that are linked by articles.
         print 'Building graph...'
+
+        # Nodes
         southnodes = []
         northnodes = []
         linknodes = []
+
+        # size contains node name and the number of times it appears.
+        # This is done to make bigger link nodes appear larger.
+        size = {}
+
+        # contains counts of article alignment, used for coloring
+        sidecount = {}
+        
+        # Other setup
         edges = []
         labels= {}
         for result in results:
             articletitle = result[4]
             if '\n' in articletitle:
-                continue
-            link = result[17]
+                # graphviz has problems with this
+                articletitle = articletitle[:articletitle.find('\n')]
+            link = result[17].lower()
             side = result[2]
             if side=='north':
                 northnodes.append(articletitle)
             else:
                 southnodes.append(articletitle)
+
+            # Add to graph
             linknodes.append(link)
-            labels[link] = link
-            labels[articletitle] = ''
             edges.append((articletitle,link))
 
-        # Import graphing libraries
-        import matplotlib
-        # Switch default output from X11
-        matplotlib.use('Agg')
+            # Set labels of nodes
+            labels[link] = link
+            labels[articletitle] = ''
 
-        import networkx as nx
-        import matplotlib.pyplot as plt
+            # Set size of nodes
+            size[link] = size[link] + 1 if link in size else 1
+            size[articletitle] = size[articletitle] + 1 if articletitle in size else 1
+
+            # Set alignment
+            if link not in sidecount:
+                sidecount[link] = {'north':0, 'south':0}
+            sidecount[link][side] = sidecount[link][side] + 1
 
         # Draw this graph
         print 'Drawing figure... %d results' % len(results)
+
+        # Clear old graph
+        plt.clf()
+
+        # Build networkx graph
         G = nx.Graph()
         G.add_nodes_from(southnodes)
         G.add_nodes_from(northnodes)
@@ -160,18 +192,30 @@ class Graph:
         G.add_edges_from(edges)
 
         print 'Computing layout...'
-        #pos = nx.spring_layout(G)
-        pos = nx.graphviz_layout(G)
+        pos = nx.graphviz_layout(G, prog='twopi')
+
+        # Converts rgb values to hex for coloring the nodes
+        def rgb_to_hex(rgb):
+            return '#%02x%02x%02x' % rgb
 
         print 'north...'
-        nx.draw_networkx_nodes(G, pos, nodelist=northnodes, node_color='blue',\
-            node_size=90, alpha=.2)
+        for node in northnodes:
+            nx.draw_networkx_nodes(G, pos, nodelist=[node], node_color='blue',\
+                node_size=80, alpha=.2)
         print 'south...'
-        nx.draw_networkx_nodes(G, pos, nodelist=southnodes, node_color='red',\
-            node_size=90, alpha=.2)
+        for node in southnodes:
+            nx.draw_networkx_nodes(G, pos, nodelist=[node], node_color='red',\
+                node_size=80, alpha=.2)
         print 'links...'
-        nx.draw_networkx_nodes(G, pos, nodelist=linknodes, node_color='green',\
-            node_size=90, alpha=.2)
+        for node in linknodes:
+            nsouth = sidecount[node]['south']
+            nnorth = sidecount[node]['north']
+            total = nsouth + nnorth
+            rgb_red = (float(nsouth) / total) * 255
+            rgb_blue = (float(nnorth) / total) * 255
+            hex = rgb_to_hex((rgb_red, 0, rgb_blue))
+            nx.draw_networkx_nodes(G, pos, nodelist=[node], node_color=hex,\
+                node_size=80+30*size[node], alpha=.2)
         print 'edges...'
         nx.draw_networkx_edges(G, pos, edgelist=edges)
         print 'labels...'
