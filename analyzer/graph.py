@@ -111,7 +111,9 @@ class Graph:
             query += ' WHERE '
             query += ' AND '.join(queryparts)
 
-        query += ' ORDER BY relevance'
+        # TODO change this back
+        query += ' ORDER BY count DESC,relevance DESC'
+        #query += ' ORDER BY relevance DESC'
 
         if 'limit' in kwargs:
             query += ' LIMIT ' + str(int(kwargs['limit']))
@@ -139,11 +141,12 @@ class Graph:
         results -- the rows of a join between the three db tables
         """
         # Output a graph of relationships
-# TODO remove article nodes altogether and just reflect articles via color (red-purple-blue)
-# and size, then connect nodes that are linked by articles.
+        # TODO remove article nodes altogether and just reflect articles via 
+        # color (red-purple-blue) and size, then connect nodes that are 
+        # linked by articles.
         print 'Building graph...'
 
-        # Nodes
+        # Lists containing nodes to be added in graph
         southnodes = []
         northnodes = []
         linknodes = []
@@ -162,6 +165,9 @@ class Graph:
             articleid = result[0]
             link = result[17].lower()
             side = result[2]
+            # Set weight of this edge equal to relevance score between 0 and 1.
+            # If relevance is 0, then it is from an unweighted field.
+            weight = result[13] if result[13] > 0 else 1.0
             if side=='north':
                 northnodes.append(articleid)
             else:
@@ -173,7 +179,7 @@ class Graph:
 
             # Set labels of nodes
             labels[link] = link
-            labels[articleid] = ''
+            #labels[articleid] = ''
 
             # Set size of nodes
             size[link] = size[link] + 1 if link in size else 1
@@ -192,11 +198,49 @@ class Graph:
 
         # Build networkx graph
         G = nx.Graph()
-        G.add_nodes_from(southnodes)
-        G.add_nodes_from(northnodes)
-        G.add_nodes_from(linknodes)
+
+        # Booleans are strings to workaround bug described here:
+        # http://groups.google.com/group/networkx-discuss/browse_thread/thread/dd4f481d63d69c5e
+#        G.add_nodes_from(southnodes, articleNode='True')
+#        G.add_nodes_from(northnodes, articleNode='True')
+        G.add_nodes_from(linknodes, linkNode='True')
         G.add_edges_from(edges)
 
+        # Adjust graph, connecting links and removing articles
+        # This reduces clutter and can make the graph more meaningful.
+        # TODO make this optional
+        print 'Linking non-articles...'
+        linkedges = []
+        for nodedata in G.nodes(data=True):
+#            if nodedata[1]['articleNode'] == 'True':
+            if not 'linkNode' in nodedata[1]:
+                continue
+
+            node = nodedata[0]
+            edges = G.edge[node]
+
+            if len(edges) > 1:
+                # connect all these nodes
+                for articleid in edges.keys():
+                    for otherlink in G.edge[articleid]:
+                        if node != otherlink:
+                            newedge = (node, otherlink)
+                            if newedge not in linkedges:
+                                linkedges.append((node, otherlink))
+
+            # remove existing edges
+            for connectednode in edges.keys():
+                # remove edge
+                G.remove_edge(node, connectednode)
+
+        # remove article nodes
+        G.remove_nodes_from(southnodes)
+        G.remove_nodes_from(northnodes)
+
+        # add edges between links
+        G.add_edges_from(linkedges)
+
+        # Compute layout with graphviz
         print 'Computing layout...'
         pos = nx.graphviz_layout(G, prog='twopi')
 
@@ -204,26 +248,33 @@ class Graph:
         def rgb_to_hex(rgb):
             return '#%02x%02x%02x' % rgb
 
+        """
         print 'north...'
         for node in northnodes:
             nx.draw_networkx_nodes(G, pos, nodelist=[node], node_color='blue',\
-                node_size=30, alpha=.5)
+                node_size=30, alpha=.2)
         print 'south...'
         for node in southnodes:
             nx.draw_networkx_nodes(G, pos, nodelist=[node], node_color='red',\
-                node_size=30, alpha=.5)
+                node_size=30, alpha=.2)
+        """
         print 'links...'
         for node in linknodes:
+            # calculate color
             nsouth = sidecount[node]['south']
             nnorth = sidecount[node]['north']
             total = nsouth + nnorth
             rgb_red = (float(nsouth) / total) * 255
             rgb_blue = (float(nnorth) / total) * 255
             hex = rgb_to_hex((rgb_red, 0, rgb_blue))
+
+            # draw
+            # TODO add scale factor for size
             nx.draw_networkx_nodes(G, pos, nodelist=[node], node_color=hex,\
-                node_size=80+30*size[node], alpha=.5)
+                node_size=80+size[node], alpha=.2)
         print 'edges...'
-        nx.draw_networkx_edges(G, pos, edgelist=edges)
+        # TODO something based on edge weight...
+        nx.draw_networkx_edges(G, pos, edgelist=linkedges)
         print 'labels...'
         nx.draw_networkx_labels(G, pos, labels, font_size=8, \
             font_color='green')
