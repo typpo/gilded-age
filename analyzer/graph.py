@@ -137,18 +137,14 @@ class Graph:
         return clause, args
 
     def buildGraph(self, results):
-        """Creates a graph of results.
+        """Creates a graph from an array of SQL query results.
         results -- the rows of a join between the three db tables
         """
         # Output a graph of relationships
-        # TODO remove article nodes altogether and just reflect articles via 
-        # color (red-purple-blue) and size, then connect nodes that are 
-        # linked by articles.
         print 'Building graph...'
 
         # Lists containing nodes to be added in graph
-        southnodes = []
-        northnodes = []
+        articlenodes = []
         linknodes = []
 
         # size contains node name and the number of times it appears.
@@ -168,10 +164,7 @@ class Graph:
             # Set weight of this edge equal to relevance score between 0 and 1.
             # If relevance is 0, then it is from an unweighted field.
             weight = result[13] if result[13] > 0 else 1.0
-            if side=='north':
-                northnodes.append(articleid)
-            else:
-                southnodes.append(articleid)
+            articlenodes.append(articleid)
 
             # Add to graph
             linknodes.append(link)
@@ -201,18 +194,16 @@ class Graph:
 
         # Booleans are strings to workaround bug described here:
         # http://groups.google.com/group/networkx-discuss/browse_thread/thread/dd4f481d63d69c5e
-#        G.add_nodes_from(southnodes, articleNode='True')
-#        G.add_nodes_from(northnodes, articleNode='True')
         G.add_nodes_from(linknodes, linkNode='True')
         G.add_edges_from(edges)
 
         # Adjust graph, connecting links and removing articles
         # This reduces clutter and can make the graph more meaningful.
         # TODO make this optional
+        # TODO keep track of edges and show them only if they pass a certain threshold
         print 'Linking non-articles...'
         linkedges = []
         for nodedata in G.nodes(data=True):
-#            if nodedata[1]['articleNode'] == 'True':
             if not 'linkNode' in nodedata[1]:
                 continue
 
@@ -234,8 +225,7 @@ class Graph:
                 G.remove_edge(node, connectednode)
 
         # remove article nodes
-        G.remove_nodes_from(southnodes)
-        G.remove_nodes_from(northnodes)
+        G.remove_nodes_from(articlenodes)
 
         # add edges between links
         G.add_edges_from(linkedges)
@@ -248,16 +238,6 @@ class Graph:
         def rgb_to_hex(rgb):
             return '#%02x%02x%02x' % rgb
 
-        """
-        print 'north...'
-        for node in northnodes:
-            nx.draw_networkx_nodes(G, pos, nodelist=[node], node_color='blue',\
-                node_size=30, alpha=.2)
-        print 'south...'
-        for node in southnodes:
-            nx.draw_networkx_nodes(G, pos, nodelist=[node], node_color='red',\
-                node_size=30, alpha=.2)
-        """
         print 'links...'
         for node in linknodes:
             # calculate color
@@ -269,7 +249,6 @@ class Graph:
             hex = rgb_to_hex((rgb_red, 0, rgb_blue))
 
             # draw
-            # TODO add scale factor for size
             nx.draw_networkx_nodes(G, pos, nodelist=[node], node_color=hex,\
                 node_size=80+size[node], alpha=.2)
         print 'edges...'
