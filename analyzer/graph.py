@@ -35,7 +35,7 @@ class Graph:
         To specify a comparator for a given column, set '_columnname', where 
         columnname is the name of the column.
 
-        limit -- number of DISTINCT results
+        limit -- number of distinct results
         """
 
         cur = self.conn.cursor()
@@ -180,8 +180,13 @@ class Graph:
         sidecount = {}
         
         # Other setup
-        edges = []
+
+        # Edges between articles and concepts
+        article_edges = []
+        # Labels - keyed by node, with string value for label
         labels= {}
+
+        # Analyze results
         for result in results:
             articleid = result[0]
             link = result[17].lower()
@@ -193,11 +198,11 @@ class Graph:
 
             # Add to graph
             linknodes.append(link)
-            edges.append((articleid,link))
+            edge = (articleid, link)
+            article_edges.append(edge)
 
             # Set labels of nodes
             labels[link] = link
-            #labels[articleid] = ''
 
             # Set size of nodes
             size[link] = size[link] + 1 if link in size else 1
@@ -220,43 +225,56 @@ class Graph:
         # Booleans are strings to workaround bug described here:
         # http://groups.google.com/group/networkx-discuss/browse_thread/thread/dd4f481d63d69c5e
         G.add_nodes_from(linknodes, linkNode='True')
-        G.add_edges_from(edges)
+        G.add_edges_from(article_edges)
 
         # Adjust graph, connecting links and removing articles
         # This reduces clutter and can make the graph more meaningful.
         # TODO make this optional
         # TODO keep track of edges and show them only if they pass a certain threshold
         print 'Linking non-articles...'
-        linkedges = []
+
+        # Dictionary keyed by edges, value indicates how many times they appear.
+        linkedges = {}
         for nodedata in G.nodes(data=True):
             if not 'linkNode' in nodedata[1]:
                 continue
 
             node = nodedata[0]
+
+            # Edges between this link node and articles
             edges = G.edge[node]
 
             if len(edges) > 1:
-                # connect all these nodes
+                # Connect this link node wth the link nodes of all its associated
+                # articles.
                 for articleid in edges.keys():
                     for otherlink in G.edge[articleid]:
                         if node != otherlink:
                             newedge = (node, otherlink)
                             if newedge not in linkedges:
-                                linkedges.append((node, otherlink))
+                                linkedge = (node, otherlink)
+                                linkedges[linkedge] = linkedges[linkedge] + 1 \
+                                    if linkedge in linkedges else 1
 
             # remove existing edges
             for connectednode in edges.keys():
                 # remove edge
                 G.remove_edge(node, connectednode)
 
-        # remove article nodes
+        # remove article nodes.  All edges were just removed above.
         G.remove_nodes_from(articlenodes)
+        G.remove_edges_from(article_edges)
 
-        # add edges between links
-        G.add_edges_from(linkedges)
+        # add edges between links, but only if they appear a certain number of times.
+        # This is the improve readability and stay within memory limits, because
+        # the positioning algorithm is quadratic.
+        for edge in linkedges:
+            if linkedges[edge] > 10:
+                G.add_edge(edge)
+        print 'Pruned', len(linkedges), 'edges to', len(G.edges())
 
         # Compute layout with graphviz
-        print 'Computing layout...'
+        print 'Computing layout...', len(G.edges()), 'edges and', len(G.nodes()), 'nodes'
         pos = nx.graphviz_layout(G, prog='twopi')
 
         # Converts rgb values to hex for coloring the nodes
