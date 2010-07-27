@@ -31,7 +31,9 @@ class Graph:
 
     def graph(self, n, **kwargs):
         cur = self.conn.cursor()
-        query, queryargs = self._buildQueryFromArgs(None, limit=n, **kwargs)
+
+        # Run query
+        query, queryargs = self._buildQueryFromArgs(limit=n, **kwargs)
         cur.execute(query, queryargs)
         results = cur.fetchall()
 
@@ -45,25 +47,32 @@ class Graph:
         conceptedges = self._linkRelatedConcepts(articles, concepts)
 
         # Put this on a graph and write it to file
+        self._writeGraph(concepts, conceptedges)
+
         print 'Done'
 
     def _articleConceptRelations(self, results):
-        """Record relationships between articles and concepts, concepts and articles
-        using two dictionaries."""
+        """Record relationships between articles and concepts, concepts and 
+        articles using two dictionaries."""
 
         concepts = {}
         articles = {}
         for result in results:
             article = result[0]
             concept = result[17]
+            side = result[2]
 
             if concept not in concepts:
-                concepts[concept] = []
+                concepts[concept] = {'articles':[], \
+                    'alignment':{'north':0,'south':0}}
             if article not in articles:
                 articles[article] = []
 
             # Add article under concept
-            concepts[concept].append(article)
+            concepts[concept]['articles'].append(article)
+
+            # Keep track of concept alignment
+            concepts[concept]['alignment'][side] += 1
 
             # Add concept under article
             articles[article].append(concept)
@@ -82,7 +91,7 @@ class Graph:
             # Find concepts associated with this one
 
             # Search through articles associated with this concept
-            for article in concepts[concept]:
+            for article in concepts[concept]['articles']:
 
                 # Go through concepts associated with each article
                 for otherconcept in articles[article]:
@@ -103,7 +112,7 @@ class Graph:
                     conceptedges[edge] += 1
         return conceptedges
 
-    def _createGraph(self, concepts, conceptedges):
+    def _writeGraph(self, concepts, conceptedges):
         g = nx.Graph()
         g.add_nodes_from(concepts.keys())
 
