@@ -63,9 +63,18 @@ class Graph:
             side = result[2]
 
             if concept not in concepts:
+                # Create basic concept structure
+                # Concept
+                # |- # articles total
+                # |- articles list
+                # |- alignment
+                # | |- # north
+                # | |- # south
                 concepts[concept] = {'articles':[], \
                     'alignment':{'north':0,'south':0}}
+
             if article not in articles:
+                # Article structure is just a list of concepts.
                 articles[article] = []
 
             # Add article under concept
@@ -73,6 +82,9 @@ class Graph:
 
             # Keep track of concept alignment
             concepts[concept]['alignment'][side] += 1
+
+            # Update total
+            concepts[concept]['total'] += 1
 
             # Add concept under article
             articles[article].append(concept)
@@ -120,14 +132,30 @@ class Graph:
         added_edges = []
         for edge in conceptedges:
             # TODO make this dynamic - maybe based on average degree
-            if conceptedges[edge] > 10:
+            if conceptedges[edge] > 15:
                 g.add_edge(edge[0], edge[1])
                 added_edges.append(edge)
 
         print 'Computing layout...', len(added_edges), 'edges and', len(concepts.keys()), 'nodes'
         pos = nx.graphviz_layout(g, prog='twopi')
-        nx.draw_networkx_nodes(g, pos, nodelist=concepts.keys(), node_color='white',\
-            node_size=80, alpha=.2)
+
+        # Add nodes for each concept
+        for concept in concepts:
+            # Compute color
+            numnorth = concept['alignment']['north']
+            numsouth = concept['alignment']['south']
+            total = numnorth + numsouth
+            rgb_red = (float(nsouth) / total) * 255
+            rgb_blue = (float(nnorth) / total) * 255
+            hex_color = '#%02x%02x%02x' % (rgb_red, 0, rgb_blue)
+
+            # Compute size
+            size = 80 + total
+
+            # Draw nodes
+            nx.draw_networkx_nodes(g, pos, nodelist=concept, \
+                node_color=hex_color, node_size=size, alpha=.2)
+
         nx.draw_networkx_edges(g, pos, edgelist=added_edges)
         labels = dict([(x, x) for x in concepts.keys()])
         nx.draw_networkx_labels(g, pos, labels, font_size=8, font_color='green')
