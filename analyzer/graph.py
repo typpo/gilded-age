@@ -29,27 +29,42 @@ class Graph:
     def __init__(self, conn):
         self.conn = conn
 
-    def getArticles(self, graph, **kwargs):
+    def graph(self, limit, **kwargs):
         """Get articles based on a number of article and relationship parameters.
 
         To specify a comparator for a given column, set '_columnname', where 
         columnname is the name of the column.
+
+        limit -- number of DISTINCT results
         """
 
-        query, queryargs = self._buildQueryFromArgs(**kwargs)
-
-        # Execute query on table join
         cur = self.conn.cursor()
+
+        # First, get all distinct results to find the total number of concepts.
+        # Use the 'data' field (the result of analysis) to determine unique
+        # results.
+        query, queryargs = self._buildQueryFromArgs('data', limit=limit, **kwargs)
         cur.execute(query, queryargs)
-        results = cur.fetchall()
+        distinct_results = cur.fetchall()
 
-        # TODO for each link found, find the same article's other links
-        # Then, choose some of the other links, and graph them.
+        # Now, get ungrouped results to find the actual articles and the links 
+        # they contain.
+        results = []
+        print 'Query distinct results...'
+        for concept in distinct_results:
+            # Set parameters
+            concept_type = concept[16]
+            concept_data = concept[17]
+            kwargs['data'] = concept_data
+            kwargs['_data'] = 'LIKE'
+            kwargs['type'] = concept_type
+            kwargs['_type'] = 'LIKE'
 
-        articleresults = db.articles.processAll(results)
+            query, queryargs = self._buildQueryFromArgs(None, **kwargs)
+            cur.execute(query, queryargs)
+            results.extend(cur.fetchall())
 
-        if graph:
-            self.buildGraph(results)
+        self.buildGraph(results)
 
         return db.articles.processAll(results)
 
@@ -64,10 +79,16 @@ class Graph:
             print '%d%%' % percent
             self.getEntities(article)
 
-    def _buildQueryFromArgs(self, **kwargs):
+    def _buildQueryFromArgs(self, groupby, **kwargs):
         """Builds an SQL query from named parameters.
         This can handle any fields in all 3 (current) analysis tables as 
         named arguments, as specified in cfg/graph.cfg.
+
+        Special fields that correspond to SQL query options:
+            limit - to limit number of results
+
+        Special fields not specified by user:
+            groupby - for getting information when building graph
 
         To specify a comparator for an argument, set the argument's name
         prepended with a "_", eg. "_data='LIKE'"
@@ -82,7 +103,7 @@ class Graph:
         queryargs = ()
         for arg in kwargs:
             # Special fields
-            if arg=='limit' or (len(arg) > 0 and arg[0]=='_'):
+            if arg=='limit' or arg=='groupby' or (len(arg) > 0 and arg[0]=='_'):
                 continue
 
             # Validate fields
@@ -110,6 +131,10 @@ class Graph:
         if len(queryparts) > 0:
             query += ' WHERE '
             query += ' AND '.join(queryparts)
+
+        # Grouping
+        if groupby is not None:
+            query += ' GROUP BY ' + groupby
 
         # TODO change this back
         query += ' ORDER BY count DESC,relevance DESC'
