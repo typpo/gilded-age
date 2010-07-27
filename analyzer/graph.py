@@ -29,7 +29,88 @@ class Graph:
     def __init__(self, conn):
         self.conn = conn
 
-    def graph(self, limit, **kwargs):
+    def graph(self, n, **kwargs):
+        cur = self.conn.cursor()
+        query, queryargs = self._buildQueryFromArgs(None, limit=n, **kwargs)
+        cur.execute(query, queryargs)
+        results = cur.fetchall()
+
+        totalresults = len(results)
+        print totalresults, 'query results'
+
+        # Record relationships between articles and concepts, concepts and articles
+        # using two dictionaries.
+        concepts = {}
+        articles = {}
+        for result in results:
+            article = result[0]
+            concept = result[17]
+
+            if concept not in concepts:
+                concepts[concept] = []
+            if article not in articles:
+                articles[article] = []
+
+            # Add article under concept
+            concepts[concept].append(article)
+
+            # Add concept under article
+            articles[article].append(concept)
+
+        # Now link concepts together
+
+        # Dictionary keyed by edges between concepts, value is the number of 
+        # times those edges occur.
+        conceptedges = {}
+        for concept in concepts:
+            # Find concepts associated with this one
+
+            # Search through articles associated with this concept
+            for article in concepts[concept]:
+
+                # Go through concepts associated with each article
+                for otherconcept in articles[article]:
+                    # Skip self-reference
+                    if concept == otherconcept:
+                        continue
+
+                    # Potential new edges
+                    edge = (concept, otherconcept)
+                    edge2 = (otherconcept, concept)
+
+                    # Test for duplicates
+                    if edge2 in conceptedges:
+                        continue
+
+                    if edge not in conceptedges:
+                        conceptedges[edge] = 0
+                    conceptedges[edge] += 1
+
+        # Now put this on a graph.
+        g = nx.Graph()
+        g.add_nodes_from(concepts.keys())
+
+        # Prune by # of edges
+        added_edges = []
+        for edge in conceptedges:
+            # TODO make this dynamic - maybe based on average degree
+            if conceptedges[edge] > 10:
+                g.add_edge(edge[0], edge[1])
+                added_edges.append(edge)
+
+        print 'Computing layout...', len(added_edges), 'edges and', len(concepts.keys()), 'nodes'
+        pos = nx.graphviz_layout(g, prog='twopi')
+        nx.draw_networkx_nodes(g, pos, nodelist=concepts.keys(), node_color='white',\
+            node_size=80, alpha=.2)
+        nx.draw_networkx_edges(g, pos, edgelist=added_edges)
+        labels = dict([(x, x) for x in concepts.keys()])
+        nx.draw_networkx_labels(g, pos, labels, font_size=8, font_color='green')
+
+        plt.axis('tight')
+        plt.savefig('outputgraph.png')
+        print 'Done'
+
+    def getAnalysis(self, limit, **kwargs):
         """Get articles based on a number of article and relationship parameters.
 
         To specify a comparator for a given column, set '_columnname', where 
@@ -43,29 +124,9 @@ class Graph:
         # First, get all distinct results to find the total number of concepts.
         # Use the 'data' field (the result of analysis) to determine unique
         # results.
-        query, queryargs = self._buildQueryFromArgs('data', limit=limit, **kwargs)
+        query, queryargs = self._buildQueryFromArgs(limit=limit, **kwargs)
         cur.execute(query, queryargs)
-        distinct_results = cur.fetchall()
-
-        # Now, get ungrouped results to find the actual articles and the links 
-        # they contain.
-        results = []
-        print 'Query distinct results...'
-        for concept in distinct_results:
-            # Set parameters
-            concept_type = concept[16]
-            concept_data = concept[17]
-            kwargs['data'] = concept_data
-            kwargs['_data'] = 'LIKE'
-            kwargs['type'] = concept_type
-            kwargs['_type'] = 'LIKE'
-
-            query, queryargs = self._buildQueryFromArgs(None, **kwargs)
-            cur.execute(query, queryargs)
-            results.extend(cur.fetchall())
-
-        self.buildGraph(results)
-
+        results = cur.fetchall()
         return db.articles.processAll(results)
 
     def _getRelatedAnalysis(self, articlerestults):
@@ -79,16 +140,13 @@ class Graph:
             print '%d%%' % percent
             self.getEntities(article)
 
-    def _buildQueryFromArgs(self, groupby, **kwargs):
+    def _buildQueryFromArgs(self, **kwargs):
         """Builds an SQL query from named parameters.
         This can handle any fields in all 3 (current) analysis tables as 
         named arguments, as specified in cfg/graph.cfg.
 
         Special fields that correspond to SQL query options:
             limit - to limit number of results
-
-        Special fields not specified by user:
-            groupby - for getting information when building graph
 
         To specify a comparator for an argument, set the argument's name
         prepended with a "_", eg. "_data='LIKE'"
@@ -103,7 +161,7 @@ class Graph:
         queryargs = ()
         for arg in kwargs:
             # Special fields
-            if arg=='limit' or arg=='groupby' or (len(arg) > 0 and arg[0]=='_'):
+            if arg=='limit' or (len(arg) > 0 and arg[0]=='_'):
                 continue
 
             # Validate fields
@@ -132,13 +190,8 @@ class Graph:
             query += ' WHERE '
             query += ' AND '.join(queryparts)
 
-        # Grouping
-        if groupby is not None:
-            query += ' GROUP BY ' + groupby
-
-        # TODO change this back
+        # Order by # of occurences in overall analysis
         query += ' ORDER BY count DESC,relevance DESC'
-        #query += ' ORDER BY relevance DESC'
 
         if 'limit' in kwargs:
             query += ' LIMIT ' + str(int(kwargs['limit']))
