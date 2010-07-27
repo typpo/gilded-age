@@ -83,9 +83,6 @@ class Graph:
             # Keep track of concept alignment
             concepts[concept]['alignment'][side] += 1
 
-            # Update total
-            concepts[concept]['total'] += 1
-
             # Add concept under article
             articles[article].append(concept)
 
@@ -132,34 +129,39 @@ class Graph:
         added_edges = []
         for edge in conceptedges:
             # TODO make this dynamic - maybe based on average degree
-            if conceptedges[edge] > 15:
+            if conceptedges[edge] > 200:
                 g.add_edge(edge[0], edge[1])
                 added_edges.append(edge)
 
+        # Compute node positions
         print 'Computing layout...', len(added_edges), 'edges and', len(concepts.keys()), 'nodes'
         pos = nx.graphviz_layout(g, prog='twopi')
 
         # Add nodes for each concept
         for concept in concepts:
             # Compute color
-            numnorth = concept['alignment']['north']
-            numsouth = concept['alignment']['south']
+            numnorth = concepts[concept]['alignment']['north']
+            numsouth = concepts[concept]['alignment']['south']
             total = numnorth + numsouth
-            rgb_red = (float(nsouth) / total) * 255
-            rgb_blue = (float(nnorth) / total) * 255
+            rgb_red = (float(numsouth) / total) * 255
+            rgb_blue = (float(numnorth) / total) * 255
             hex_color = '#%02x%02x%02x' % (rgb_red, 0, rgb_blue)
 
             # Compute size
             size = 80 + total
 
             # Draw nodes
-            nx.draw_networkx_nodes(g, pos, nodelist=concept, \
-                node_color=hex_color, node_size=size, alpha=.2)
+            nx.draw_networkx_nodes(g, pos, nodelist=[concept], \
+                node_color=hex_color, node_size=size, alpha=.8)
 
+        # Draw edges
         nx.draw_networkx_edges(g, pos, edgelist=added_edges)
+
+        # Draw labels
         labels = dict([(x, x) for x in concepts.keys()])
         nx.draw_networkx_labels(g, pos, labels, font_size=8, font_color='green')
 
+        # Draw graph and save
         plt.axis('tight')
         plt.savefig('outputgraph.png')
 
@@ -266,149 +268,6 @@ class Graph:
             args = (values,)
 
         return clause, args
-
-    def buildGraph(self, results):
-        """Creates a graph from an array of SQL query results.
-        results -- the rows of a join between the three db tables
-        """
-        # Output a graph of relationships
-        print 'Building graph...'
-
-        # Lists containing nodes to be added in graph
-        articlenodes = []
-        linknodes = []
-
-        # size contains node name and the number of times it appears.
-        # This is done to make bigger link nodes appear larger.
-        size = {}
-
-        # contains counts of article alignment, used for coloring
-        sidecount = {}
-        
-        # Other setup
-
-        # Edges between articles and concepts
-        article_edges = []
-        # Labels - keyed by node, with string value for label
-        labels= {}
-
-        # Analyze results
-        for result in results:
-            articleid = result[0]
-            link = result[17].lower()
-            side = result[2]
-            # Set weight of this edge equal to relevance score between 0 and 1.
-            # If relevance is 0, then it is from an unweighted field.
-            weight = result[13] if result[13] > 0 else 1.0
-            articlenodes.append(articleid)
-
-            # Add to graph
-            linknodes.append(link)
-            edge = (articleid, link)
-            article_edges.append(edge)
-
-            # Set labels of nodes
-            labels[link] = link
-
-            # Set size of nodes
-            size[link] = size[link] + 1 if link in size else 1
-            size[articleid] = size[articleid] + 1 if articleid in size else 1
-
-            # Set alignment
-            if link not in sidecount:
-                sidecount[link] = {'north':0, 'south':0}
-            sidecount[link][side] = sidecount[link][side] + 1
-
-        # Draw this graph
-        print 'Drawing figure... %d results' % len(results)
-
-        # Clear old graph
-        plt.clf()
-
-        # Build networkx graph
-        G = nx.Graph()
-
-        # Booleans are strings to workaround bug described here:
-        # http://groups.google.com/group/networkx-discuss/browse_thread/thread/dd4f481d63d69c5e
-        G.add_nodes_from(linknodes, linkNode='True')
-        G.add_edges_from(article_edges)
-
-        # Adjust graph, connecting links and removing articles
-        # This reduces clutter and can make the graph more meaningful.
-        # TODO make this optional
-        # TODO keep track of edges and show them only if they pass a certain threshold
-        print 'Linking non-articles...'
-
-        # Dictionary keyed by edges, value indicates how many times they appear.
-        linkedges = {}
-        for nodedata in G.nodes(data=True):
-            if not 'linkNode' in nodedata[1]:
-                continue
-
-            node = nodedata[0]
-
-            # Edges between this link node and articles
-            edges = G.edge[node]
-
-            if len(edges) > 1:
-                # Connect this link node wth the link nodes of all its associated
-                # articles.
-                for articleid in edges.keys():
-                    for otherlink in G.edge[articleid]:
-                        if node != otherlink:
-                            newedge = (node, otherlink)
-                            if newedge not in linkedges:
-                                linkedge = (node, otherlink)
-                                linkedges[linkedge] = linkedges[linkedge] + 1 \
-                                    if linkedge in linkedges else 1
-
-            # remove existing edges
-            for connectednode in edges.keys():
-                # remove edge
-                G.remove_edge(node, connectednode)
-
-        # remove article nodes.  All edges were just removed above.
-        G.remove_nodes_from(articlenodes)
-        G.remove_edges_from(article_edges)
-
-        # add edges between links, but only if they appear a certain number of times.
-        # This is the improve readability and stay within memory limits, because
-        # the positioning algorithm is quadratic.
-        for edge in linkedges:
-            if linkedges[edge] > 10:
-                G.add_edge(edge)
-        print 'Pruned', len(linkedges), 'edges to', len(G.edges())
-
-        # Compute layout with graphviz
-        print 'Computing layout...', len(G.edges()), 'edges and', len(G.nodes()), 'nodes'
-        pos = nx.graphviz_layout(G, prog='twopi')
-
-        # Converts rgb values to hex for coloring the nodes
-        def rgb_to_hex(rgb):
-            return '#%02x%02x%02x' % rgb
-
-        print 'links...'
-        for node in linknodes:
-            # calculate color
-            nsouth = sidecount[node]['south']
-            nnorth = sidecount[node]['north']
-            total = nsouth + nnorth
-            rgb_red = (float(nsouth) / total) * 255
-            rgb_blue = (float(nnorth) / total) * 255
-            hex = rgb_to_hex((rgb_red, 0, rgb_blue))
-
-            # draw
-            nx.draw_networkx_nodes(G, pos, nodelist=[node], node_color=hex,\
-                node_size=80+size[node], alpha=.2)
-        print 'edges...'
-        # TODO something based on edge weight...
-        nx.draw_networkx_edges(G, pos, edgelist=linkedges)
-        print 'labels...'
-        nx.draw_networkx_labels(G, pos, labels, font_size=8, \
-            font_color='green')
-        print 'Saving figure...'
-        plt.axis('tight')
-        plt.savefig('outputgraph.png')
 
     def getAnalysis(self, article_id=None, result_type=None, result_data=None, relevance=None):
         """Given an article, return analysis associated with it.
