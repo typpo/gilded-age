@@ -38,8 +38,19 @@ class Graph:
         totalresults = len(results)
         print totalresults, 'query results'
 
-        # Record relationships between articles and concepts, concepts and articles
-        # using two dictionaries.
+        # Get dictionaries of article-concept relationships
+        articles, concepts = self._articleConceptRelations(results)
+
+        # Now link related concepts together
+        conceptedges = self._linkRelatedConcepts(articles, concepts)
+
+        # Put this on a graph and write it to file
+        print 'Done'
+
+    def _articleConceptRelations(self, results):
+        """Record relationships between articles and concepts, concepts and articles
+        using two dictionaries."""
+
         concepts = {}
         articles = {}
         for result in results:
@@ -57,7 +68,12 @@ class Graph:
             # Add concept under article
             articles[article].append(concept)
 
-        # Now link concepts together
+        return articles, concepts
+
+    def _linkRelatedConcepts(self, articles, concepts):
+        """Creates edges connecting concepts that are 'related,' where related
+        means that they share a common article.
+        """
 
         # Dictionary keyed by edges between concepts, value is the number of 
         # times those edges occur.
@@ -85,8 +101,9 @@ class Graph:
                     if edge not in conceptedges:
                         conceptedges[edge] = 0
                     conceptedges[edge] += 1
+        return conceptedges
 
-        # Now put this on a graph.
+    def _createGraph(self, concepts, conceptedges):
         g = nx.Graph()
         g.add_nodes_from(concepts.keys())
 
@@ -108,7 +125,6 @@ class Graph:
 
         plt.axis('tight')
         plt.savefig('outputgraph.png')
-        print 'Done'
 
     def getAnalysis(self, limit, **kwargs):
         """Get articles based on a number of article and relationship parameters.
