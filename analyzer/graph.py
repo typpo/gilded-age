@@ -59,7 +59,7 @@ class Graph:
         articles = {}
         for result in results:
             article = result[0]
-            concept = result[17]
+            concept = result[10]
             side = result[2]
 
             if concept not in concepts:
