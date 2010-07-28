@@ -278,7 +278,6 @@ class Graph:
 
         Except for noted below, all parameters are tested for exact equality:
         relevance -- specifies score of at least X
-        result_data -- specifies data is LIKE
         """
 
         cur = self.conn.cursor()
@@ -319,7 +318,7 @@ class Graph:
                         queryparts.append('type=?')
                         queryargs.append(result_type)
                     if result_data is not None:
-                        queryparts.append('data LIKE ?')
+                        queryparts.append('data=?')
                         queryargs.append(result_data)
 
                     # set id
