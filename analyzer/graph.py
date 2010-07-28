@@ -33,6 +33,7 @@ class Graph:
         cur = self.conn.cursor()
 
         # Run query
+        print 'Running query'
         query, queryargs = self._buildQueryFromArgs(limit=n, **kwargs)
         cur.execute(query, queryargs)
         results = cur.fetchall()
@@ -41,12 +42,15 @@ class Graph:
         print totalresults, 'query results'
 
         # Get dictionaries of article-concept relationships
+        print 'Creating hash tables'
         articles, concepts = self._articleConceptRelations(results)
 
         # Now link related concepts together
+        print 'Linking concepts'
         conceptedges = self._linkRelatedConcepts(articles, concepts)
 
         # Put this on a graph and write it to file
+        print 'Writing graph'
         self._writeGraph(concepts, conceptedges)
 
         print 'Done'
