@@ -35,6 +35,7 @@ class Graph:
         # Run query
         print 'Running query'
         query, queryargs = self._buildQueryFromArgs(limit=n, **kwargs)
+        print query
         cur.execute(query, queryargs)
         results = cur.fetchall()
 
@@ -133,7 +134,7 @@ class Graph:
         added_edges = []
         for edge in conceptedges:
             # TODO make this dynamic - maybe based on average degree
-            if conceptedges[edge] > 200:
+            if conceptedges[edge] > 100:
                 g.add_edge(edge[0], edge[1])
                 added_edges.append(edge)
 
@@ -250,7 +251,7 @@ class Graph:
             query += ' AND '.join(queryparts)
 
         # Order by # of occurences in overall analysis
-        query += ' ORDER BY count DESC,relevance DESC'
+        query += ' ORDER BY count DESC'
 
         if 'limit' in kwargs:
             query += ' LIMIT ' + str(int(kwargs['limit']))
