@@ -140,7 +140,7 @@ class Graph:
 
         # Compute node positions
         print 'Computing layout...', len(added_edges), 'edges and', len(concepts.keys()), 'nodes'
-        pos = nx.graphviz_layout(g, prog='twopi')
+        pos = nx.circular_layout(g)
 
         # Add nodes for each concept
         for concept in concepts:
