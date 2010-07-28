@@ -337,37 +337,6 @@ class Graph:
     #
     # --- OLDER FUNCTIONS that work on single articles. ---
     #
-
-    def getRelatedArticles(self, article):
-        """Get articles related to a given article"""
-        if not isinstance(article, db.articles.Article):
-            print 'Wrong type, can\'t build articles graph'
-            return
-
-        cur = self.conn.cursor()
-        relations = self.getAnalysis(article)
-        
-        ret = []
-        for analyzer in constants.ENABLED_ANALYZERS:
-            if analyzer == 'CALAIS':
-                ret = []
-                for relation in relations:
-                    # Find results for the same relation and order by high scores.
-                    # TODO needs to be improved
-                    query = 'SELECT * from calais_results WHERE relation_id=? order by relevance'
-                    cur.execute(query, (relation.id,))
-                    results = db.calaisresults.processAll(cur.fetchall())
-
-                    # Get all the articles associated with these results.
-                    for result in results:
-                        # TODO avoid duplicates
-                        query = 'SELECT * from articles WHERE id=?'
-                        cur.execute(query, (result.article_id,))
-                        related = db.articles.processAll(cur.fetchall())
-
-                        ret.extend(related)
-                return ret
-
     def getCategories(self, article):
         """Given an article, return its category"""
         if not isinstance(article, db.articles.Article):
