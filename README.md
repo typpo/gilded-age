@@ -1,9 +1,11 @@
 ## Gilded Age ##
 
 **Summary**
+
 Newspaper content analysis project tailored toward archives that contain records from the Civil War, Reconstruction, and Gilded Age eras of American history.  In particular, we focus on textual and content analytics to identify local and national trends in corruption.
 
 **Proposal**
+
 [Here][1]
 
 **Goals**
