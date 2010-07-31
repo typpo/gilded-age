@@ -1,3 +1,10 @@
 https://docs.google.com/document/edit?id=1_rdtlmmPQDbRolL0nOpiIuLGH1XG1OLAypffDcdCLLI&hl=en&authkey=CPn3gZcI
 
-add index tables for type, data, count, and relevance.
+Optimizing queries:
+    Add index tables for type, data, count, and relevance.
+
+Disambiguation:
+    Use fts3 for disambiguation searches.
+
+Graphing:
+    Graphing is different from graph visualization.  Decide whether or not to pursue decent looking visualizations in earnest.  Consider Circos.  Look into igraph.
