@@ -11,6 +11,8 @@ import matplotlib
 matplotlib.use('Agg')
 
 import networkx as nx
+import numpy as np
+import matplotlib.mlab as mlab
 import matplotlib.pyplot as plt
 
 # SQL comparators to accept in api calls.
@@ -30,6 +32,9 @@ class Graph:
         self.conn = conn
 
     def graph(self, n, **kwargs):
+        """Creates a graph representing links between various entities and
+        concepts extracted in analysis.
+        """
         cur = self.conn.cursor()
 
         # Run query
@@ -55,6 +60,23 @@ class Graph:
         self._writeGraph(concepts, conceptedges)
 
         print 'Done'
+
+    def histogram(self, n, **kwargs):
+        """Draws a histogram of query results."""
+        x = [1,2,3]
+        
+        # Break down dates to x axis
+
+        # the histogram of the data
+        n, bins, patches = plt.hist(x, 50, normed=1, facecolor='green', alpha=0.75)
+
+        plt.xlabel('Date')
+        plt.ylabel('Occurrences')
+        plt.title(r'Histogram')
+
+        plt.grid(True)
+        plt.axis('tight')
+        plt.savefig('outputgraph.png')
 
     def _articleConceptRelations(self, results):
         """Record relationships between articles and concepts, concepts and 
