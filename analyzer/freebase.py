@@ -1,5 +1,9 @@
 import freebase
 
+# Percent Freebase relevance threshold to consider an entity for 
+# disambiguation
+RELEVANCE_THRESHOLD = 60.0
+
 # Some mappings that we already know about, for more accurate search results
 CALAIS_TYPE_MAPPING = {
     'Person':'/people/person',
@@ -32,24 +36,53 @@ class FreebaseLinker:
 
         # Check if entity has known type.
         # This is done for disambiguation purposes, as it constrains Freebase's search.
+        resolved_type = self._resolveEntityType(entity_type)
+
+        # Send freebase search with resolved type
+        results = freebase.search(query=entity, type=resolved_type)
+
+        # Dictionary keyed by entity, value indicates the number of times this
+        # entity appears in the database.
+        counts = {}
+
+        for result in relevant_results:
+            if result['relevance:score'] < RELEVANCE_THRESHOLD:
+                # Relevance score too low
+                continue
+
+                name = result['name']
+
+                # Construct a list with this entity's actual name and all its 
+                # aliases
+                search_terms = [name]
+                search_terms.extend(result['alias'])
+
+                # Loop through each of these possible names
+                for term in search_terms:
+                    # Now count the number of times this query appears in the 
+                    # database in actual article text.
+                    # TODO this would be helped a lot by FTS3
+                    query = 'SELECT * from articles WHERE text LIKE ?'
+                    if result no in counts:
+                        counts[name] = 0
+                    counts[name] += len(cur.execute(query, (term,)))
+
+        # Now pick the entity that appeared the most.
+        # TODO
+
+        # Note that this technique relies on the idea that we have a
+        # good base of documents, because disambiguated possibilities
+        # are verified by their presence in other documents.
+
+        # TODO
+        # We can also improve this method by using existing semantic sources 
+        # about the civil war to ensure accurate disambiguation (eg. dbpedia)
+
+                # Then replace entry with main entity name.
+
+    def _resolveEntityType(self, type):
         resolved_type = None
         if entity_type is not None and entity_type in CALAIS_TYPE_MAPPING:
             # (support only for calais mapping only now)
             resolved_type = CALAIS_TYPE_MAPPING[entity_type]
-
-        # Send freebase search with resolved type
-        freebase.search(query=entity, type=resolved_type)
-
-        # Try it without type mapping and compare top relevance?
-
-        # Use alias to match others?
-
-        # TODO send aliases with relevance > X to the database, 
-        # and prefer the freebase entity that gets the most hits.
-        # This sounds like the best idea but requires a good base of documents.
-        # Which isn't too much to ask for, is it?
-
-        # We can also improve this method by using existing semantic sources 
-        # about the civil war to ensure accurate disambiguation (eg. dbpedia)
-
-        # Then replace entry with main entity name.
+        return resolved_type

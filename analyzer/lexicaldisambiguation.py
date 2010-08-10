@@ -7,9 +7,9 @@ class LexicalDisambiguator:
     eg. The following should resolve to the same entity:
         LINCOLN, Lincoln, Abe Lincoln
         Washington, Washington DC, Washington D.C.
-
-    TODO would be really nice to use FTS3.
     """
+    # TODO would be really nice to use FTS3.
+
     def __init__(self, conn):
         self.conn = conn
 
