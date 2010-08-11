@@ -7,3 +7,4 @@ mirrors/*
 !mirrors/spider
 calais.cfg
 reindent.py
+backup/*
