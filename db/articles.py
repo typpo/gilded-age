@@ -17,4 +17,4 @@ class Article:
         self.text = row[6]
         self.url = row[7]
         self.articleDate = row[8]
-        self.timeEntered = row[9]
+        self.timeEnter = row[9]
