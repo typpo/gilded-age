@@ -1,4 +1,23 @@
 import db.articles
+"""Utilty for populating an FTS index for articles"""
+
+def createFts(conn):
+    """Creates fts table for articles using porter stemming algorithm"""
+    conn.cursor().execute("""
+           CREATE VIRTUAL TABLE articles_fts
+                USING fts3
+                (id INTEGER PRIMARY KEY,
+                source TEXT,
+                alignment TEXT,
+                page INTEGER,
+                title TEXT,
+                summary TEXT,
+                text TEXT,
+                url TEXT,
+                articleDate DATE,
+                timeEnter DATE,
+                tokenize=porter)
+            """)
 
 def populateFts(conn):
     """Populates FTS table with contents of a normal articles table."""
@@ -16,3 +35,6 @@ def populateFts(conn):
 
     conn.commit()
     print 'Done.'
+
+def deleteFts(conn):
+    conn.cursor().execute('DROP TABLE articles_fts')
