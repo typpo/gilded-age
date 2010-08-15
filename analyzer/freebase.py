@@ -26,6 +26,10 @@ class FreebaseLinker:
     """Resolves ambiguous entities using Freebase
     """
 
+    # Indicates if FTS operators can be used on the database, which is much 
+    # faster.
+    fts3 = True
+
     def resolve(self, entity, entity_type=None, test=False):
         """Resolves an entity result of OpenCalais (or other) analysis to a 
         Freebase-defined entity"""
