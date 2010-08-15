@@ -27,7 +27,6 @@ class BaseScraper():
             sources.append(sectiondict)
         return sources
 
-
     @abc.abstractmethod
     def execute(self):
         """Run scraper"""

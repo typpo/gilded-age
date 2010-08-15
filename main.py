@@ -3,6 +3,7 @@
 from scraper.valleyscraper import ValleyScraper
 from analyzer.calaisanalyzer import CalaisAnalyzer
 from analyzer.graph import Graph
+from analyzer.freebaselinker import FreebaseLinker
 from pysqlite2 import dbapi2 as sqlite
 import db.articles
 import db.calaisitems
