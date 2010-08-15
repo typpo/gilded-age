@@ -8,7 +8,10 @@ class LexicalDisambiguator:
         LINCOLN, Lincoln, Abe Lincoln
         Washington, Washington DC, Washington D.C.
     """
-    # TODO would be really nice to use FTS3.
+
+    # Indicates whether or not these operations are on an FTS3 db, which is a 
+    # lot faster.
+    fts3 = True
 
     def __init__(self, conn):
         self.conn = conn
