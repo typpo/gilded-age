@@ -1,5 +1,3 @@
-#!/usr/bin/python
-
 from scraper.valleyscraper import ValleyScraper
 from analyzer.calaisanalyzer import CalaisAnalyzer
 from analyzer.graph import Graph
@@ -87,6 +85,7 @@ def main():
 conn = sqlite.connect(constants.DB_FILE)
 cur = conn.cursor()
 g = Graph(conn)
+f = FreebaseLinker(conn)
 
 # Main startup
 if __name__ == "__main__":
