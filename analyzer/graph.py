@@ -1,19 +1,8 @@
-from node import Node
 from ConfigParser import ConfigParser
 import constants
 import db.articles
 import db.calaisitems
 import db.calaisresults
-
-# Import graphing libraries
-import matplotlib
-# Switch default output from X11
-matplotlib.use('Agg')
-
-import networkx as nx
-import numpy as np
-import matplotlib.mlab as mlab
-import matplotlib.pyplot as plt
 
 # SQL comparators to accept in api calls.
 VALID_SQL_COMPARATORS = ['=', '!=', '<', '<=', '>', '>=', 'LIKE']
@@ -35,9 +24,19 @@ class Graph:
         """Creates a graph representing links between various entities and
         concepts extracted in analysis.
         """
-        cur = self.conn.cursor()
+
+        # Import graphing libraries
+        import matplotlib
+        # Switch default output from X11
+        matplotlib.use('Agg')
+
+        import networkx as nx
+        import numpy as np
+        import matplotlib.mlab as mlab
+        import matplotlib.pyplot as plt
 
         # Run query
+        cur = self.conn.cursor()
         print 'Running query'
         query, queryargs = self._buildQueryFromArgs(limit=n, **kwargs)
         print query
@@ -62,7 +61,29 @@ class Graph:
         print 'Done'
 
     def histogram(self, n, **kwargs):
-        """Draws a histogram of query results."""
+        """Draws a histogram of query results.
+        n -- maximum number of distinct results"""
+        from datetime import datetime
+
+        # Query for article
+        articles = self.getArticles(n, **kwargs)
+        print len(articles), 'article hits for query'
+
+        # Build dict keyed by date, with value indicating number of hits
+        results = {}
+        for article in articles:
+            # Parse date
+            datestr = article.articleDate
+            date = datetime.strptime(datestr[:datestr.find(' ')], \
+                '%Y-%m-%d')
+            if date not in results:
+                results[date] = 0
+            results[date] += 1
+
+        mindate = min(results)
+        maxdate = max(results)
+
+        # Build histogram
         x = [1,2,3]
         
         # Break down dates to x axis
@@ -77,6 +98,22 @@ class Graph:
         plt.grid(True)
         plt.axis('tight')
         plt.savefig('outputgraph.png')
+
+    def getArticles(self, limit, **kwargs):
+        """Get articles based on a number of article and relationship parameters.
+
+        To specify a comparator for a given column, set '_columnname', where 
+        columnname is the name of the column.
+
+        limit -- maximum number of distinct results
+        """
+        cur = self.conn.cursor()
+
+        query, queryargs = self._buildQueryFromArgs(limit=limit, **kwargs)
+        cur.execute(query, queryargs)
+        results = cur.fetchall()
+        return db.articles.processAll(results)
+
 
     def _articleConceptRelations(self, results):
         """Record relationships between articles and concepts, concepts and 
@@ -192,25 +229,6 @@ class Graph:
         plt.axis('tight')
         plt.savefig('outputgraph.png')
 
-    def getAnalysis(self, limit, **kwargs):
-        """Get articles based on a number of article and relationship parameters.
-
-        To specify a comparator for a given column, set '_columnname', where 
-        columnname is the name of the column.
-
-        limit -- number of distinct results
-        """
-
-        cur = self.conn.cursor()
-
-        # First, get all distinct results to find the total number of concepts.
-        # Use the 'data' field (the result of analysis) to determine unique
-        # results.
-        query, queryargs = self._buildQueryFromArgs(limit=limit, **kwargs)
-        cur.execute(query, queryargs)
-        results = cur.fetchall()
-        return db.articles.processAll(results)
-
     def _getRelatedAnalysis(self, articlerestults):
         """Gets entities of all articles"""
 
@@ -295,70 +313,6 @@ class Graph:
             args = (values,)
 
         return clause, args
-
-    def getAnalysis(self, article_id=None, result_type=None, result_data=None, relevance=None):
-        """Given an article, return analysis associated with it.
-
-        Except for noted below, all parameters are tested for exact equality:
-        relevance -- specifies score of at least X
-        """
-
-        cur = self.conn.cursor()
-        
-        ret = []
-        for analyzer in constants.ENABLED_ANALYZERS:
-            if analyzer == 'CALAIS':
-                # Find results linked
-                queryparts = []
-                queryargs = ()
-
-                if relevance is not None:
-                    clause, args = self._buildClause('relevance', relevance, \
-                        comparator='>=')
-                    queryparts.add(clause)
-                    queryargs += args
-                if article_id is not None:
-                    # Limits results to those pertaining to given article ids
-                    clause, args = self._buildClause('article_id', article_id)
-                    queryparts.add(clause)
-                    queryargs += args
-
-                # Build query
-                query = 'SELECT * from calais_results'
-                if len(queryparts) > 0:
-                    query += ' WHERE '
-                query += ' AND '.join(queryparts)
-
-                # Execute it
-                cur.execute(query, tuple(queryargs))
-                results = db.calaisresults.processAll(cur.fetchall())
-
-                for result in results:               
-                    # Get the relations linked to the article.
-                    queryparts = []
-                    queryargs = []
-                    if result_type is not None:
-                        queryparts.append('type=?')
-                        queryargs.append(result_type)
-                    if result_data is not None:
-                        queryparts.append('data=?')
-                        queryargs.append(result_data)
-
-                    # set id
-                    queryparts.append('id=?')
-                    queryargs.append(result.relation_id)
-
-                    # Build query
-                    query = 'SELECT * from calais_items WHERE '
-                    query += ' AND '.join(queryparts)
-
-                    # Execute query
-                    cur.execute(query, tuple(queryargs))
-                    relations = db.calaisitems.processAll(cur.fetchall())
-
-                    ret.extend(relations)
-        return ret
-
 
     #
     # --- OLDER FUNCTIONS that work on single articles. ---
