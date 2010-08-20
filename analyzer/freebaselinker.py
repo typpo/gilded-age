@@ -84,8 +84,6 @@ class FreebaseLinker:
         # entity appears in the database.
         counts = {}
 
-        disambiguated = None
-
         # Consider each Freebase entity that was returned in this search for
         # disambiguation or inclusion in a semantic group.
         for result in results:
@@ -103,13 +101,13 @@ class FreebaseLinker:
         else:
             print counts
             # Find key with the maximum value
-            chosen = max(counts.iteritems(), key=operator.itemgetter(1))[0]
-            print '\tCHOSE:', chosen 
+            disambig = max(counts.iteritems(), key=operator.itemgetter(1))[0]
+            print '\tCHOSE:', disambig 
 
         # TODO
         # We can also improve this method by using existing semantic sources 
         # about the civil war to ensure accurate disambiguation
-        # eg. dbpedia - take everything in the 'Civil War' network and 
+        # eg. dbpedia - take everything in the 'Civil War' project and 
         # disambiguate against it.
 
         # TODO
@@ -119,6 +117,9 @@ class FreebaseLinker:
         #   convert e to disambiguated name where it appears in entity table
         #   and
         #   update count column in entity table
+        for entity in counts:
+            query = 'UPDATE calais_items WHERE text=? SET text=?'
+            params = (entity, name)
 
     def _evaluateEntity(self, result):
         """Evaluates a Freebase entity search result for disambiguation or
