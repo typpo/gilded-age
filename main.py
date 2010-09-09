@@ -1,7 +1,7 @@
 from scraper.valleyscraper import ValleyScraper
 from analyzer.calaisanalyzer import CalaisAnalyzer
 from analyzer.graph import Graph
-from analyzer.freebaselinker import FreebaseLinker
+from linker.freebaselinker import FreebaseLinker
 from pysqlite2 import dbapi2 as sqlite
 import db.articles
 import db.calaisitems
@@ -60,14 +60,10 @@ def main():
 
         if input == 'scrape':
             # Run scrapers...
-            if 'VALLEY' in constants.ENABLED_SCRAPERS:
-                vs = ValleyScraper(conn)
-                vs.execute()
+            scrape()
         elif input == 'analyze':
             # Run analyzers on last result
-            if 'CALAIS' in constants.ENABLED_ANALYZERS:
-                ca = CalaisAnalyzer(conn)
-                ca.execute(lastfetch)
+            analyze()
         elif input == 'print':
             print lastfetch
         elif input == 'q':
@@ -81,7 +77,20 @@ def main():
                 lastfetch = None
                 print 'Bad query.'
 
-# Database setup
+def scrape():
+    if 'VALLEY' in constants.ENABLED_SCRAPERS:
+        vs = ValleyScraper(conn)
+        vs.execute()
+
+def analyze():
+    if 'CALAIS' in constants.ENABLED_ANALYZERS:
+        ca = CalaisAnalyzer(conn)
+        ca.execute(lastfetch)
+    # TODO add freebase
+    if 'FREEBASE' in constants.ENABLED_ANALYZERS:
+        pass
+
+# Database and tools setup
 conn = sqlite.connect(constants.DB_FILE)
 cur = conn.cursor()
 g = Graph(conn)
@@ -91,7 +100,7 @@ f = FreebaseLinker(conn)
 if __name__ == "__main__":
     if '-t' in sys.argv:
         createTables(conn)
-        print 'Generated tables, exiting'
+        print 'Generated tables, exiting. See fts.py for fts table generation.'
     elif '--clean' in sys.argv:
         print 'Cleaning analysis tables'
         cleanAnalysis()

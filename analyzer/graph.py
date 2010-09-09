@@ -65,6 +65,8 @@ class Graph:
         n -- maximum number of distinct results"""
         from datetime import datetime
 
+        X_RANGE = 100
+
         # Query for article
         articles = self.getArticles(n, **kwargs)
         print len(articles), 'article hits for query'
@@ -73,6 +75,7 @@ class Graph:
         results = {}
         for article in articles:
             # Parse date
+            # TODO round to nearest month
             datestr = article.articleDate
             date = datetime.strptime(datestr[:datestr.find(' ')], \
                 '%Y-%m-%d')
@@ -82,11 +85,20 @@ class Graph:
 
         mindate = min(results)
         maxdate = max(results)
+        # Get number of days in X axis and find the unit per day for an axis
+        # with a fixed size
+        delta = (maxdate-mindate).days
+        adjustment_factor = delta / float(X_RANGE)
 
-        # Build histogram
-        x = [1,2,3]
-        
-        # Break down dates to x axis
+        histo_plot = {}
+        for result in results:
+            # Calculate number of days from start and X value of this date
+            days_passed = (date-mindate).days
+            plot_value = days_passed * adjustment_factor
+            histo_plot[plot_value] = results[result]
+
+        # Build histogram from X axis dates
+        x = histo_plot.keys()
 
         # the histogram of the data
         n, bins, patches = plt.hist(x, 50, normed=1, facecolor='green', alpha=0.75)
@@ -229,21 +241,10 @@ class Graph:
         plt.axis('tight')
         plt.savefig('outputgraph.png')
 
-    def _getRelatedAnalysis(self, articlerestults):
-        """Gets entities of all articles"""
-
-        total = len(articleresults)
-        print 'Grabbing analysis for %d results...' % total
-        for article in articleresults:
-            i = articleresults.index(article)
-            percent = (float(i) / float(total))*100
-            print '%d%%' % percent
-            self.getEntities(article)
-
     def _buildQueryFromArgs(self, **kwargs):
         """Builds an SQL query from named parameters.
         This can handle any fields in all 3 (current) analysis tables as 
-        named arguments, as specified in cfg/graph.cfg.
+        named arguments, as specified in cfg/graph.cfgi
 
         Special fields that correspond to SQL query options:
             limit - to limit number of results

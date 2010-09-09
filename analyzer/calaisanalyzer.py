@@ -9,8 +9,8 @@ class CalaisAnalyzer(BaseAnalyzer):
     and recording the results."""
     def __init__(self, conn):
         """Initialize with database connection"""
-        super(CalaisAnalyzer, self).__init__(conn)
         print 'Initializing CalaisAnalyzer...'
+        super(CalaisAnalyzer, self).__init__(conn)
         self.loadcfg()
         self.calais = Calais(self.key, submitter=self.identifier)
 

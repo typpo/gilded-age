@@ -24,7 +24,7 @@ CALAIS_TYPE_MAPPING = {
 # MedicalTreatment
 #    'Organization':'/organization/organization',
 
-class FreebaseLinker:
+class FreebaseLinker(BaseLinker):
     """Resolves ambiguous entities using Freebase
     Set attribute fts to use full text search (FTS) database or not.
     """
@@ -34,7 +34,8 @@ class FreebaseLinker:
     fts = True
 
     def __init__(self, conn):
-        self.conn = conn
+        print 'Initializing FreebaseLinker...'
+        super(FreebaseLinker, self).__init__(conn)
 
     def test(self, q=10):
         """Tries to resolve a few entities
