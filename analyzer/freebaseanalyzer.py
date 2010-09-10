@@ -7,7 +7,6 @@ class FreebaseAnalyzer(BaseAnalyzer):
         """Initialize with database connection and optional graph,
         Freebase linker"""
 
-        print 'Initializing FreebaseAnalyzer...'
         super(FreebaseAnalyzer, self).__init__(conn)
 
         if graph is None:
@@ -18,11 +17,11 @@ class FreebaseAnalyzer(BaseAnalyzer):
             linker = FreebaseLinker(conn)
         self.linker = linker
 
-    def execute(self, documents):
+    def execute(self, articles):
         """Run analysis on a list of documents"""
 
         # Get list of calais results associated with documents
-        for document in documents:
+        for document in articles:
             entity_items = self.graph.getEntities(document)
 
         # Attempt to resolve them with freebase

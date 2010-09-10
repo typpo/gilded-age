@@ -11,6 +11,6 @@ class BaseAnalyzer():
         self.cur = conn.cursor()
 
     @abc.abstractmethod
-    def execute(self, documents):
+    def execute(self, articles):
         """Runs analysis on a list of documents."""
         return
