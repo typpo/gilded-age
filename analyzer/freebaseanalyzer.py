@@ -20,7 +20,6 @@ class FreebaseAnalyzer(BaseAnalyzer):
 
     def execute(self, documents):
         """Run analysis on a list of documents"""
-        pass
 
         # Get list of calais results associated with documents
         for document in documents:

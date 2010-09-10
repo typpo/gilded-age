@@ -1,3 +1,4 @@
+from baselinker import BaseLinker
 import freebase
 import operator
 
@@ -24,17 +25,16 @@ CALAIS_TYPE_MAPPING = {
 # MedicalTreatment
 #    'Organization':'/organization/organization',
 
+# Indicates if FTS operators can be used on the database, which is much 
+# faster.
+fts = True
+
 class FreebaseLinker(BaseLinker):
     """Resolves ambiguous entities using Freebase
     Set attribute fts to use full text search (FTS) database or not.
     """
 
-    # Indicates if FTS operators can be used on the database, which is much 
-    # faster.
-    fts = True
-
     def __init__(self, conn):
-        print 'Initializing FreebaseLinker...'
         super(FreebaseLinker, self).__init__(conn)
 
     def test(self, q=10):
@@ -54,8 +54,8 @@ class FreebaseLinker(BaseLinker):
 
     def resolveAll(self, itemlist, test=False):
         """Takes a list of calais items to resolve."""
-        for calais_item in itemlist:
-            self.resolve(calais_item, test=test)
+        for item in itemlist:
+            self.resolve(item, test=test)
 
     def resolve(self, item, test=False):
         """Resolves an entity result of OpenCalais (or other) analysis to a 
@@ -110,6 +110,9 @@ class FreebaseLinker(BaseLinker):
         # about the civil war to ensure accurate disambiguation
         # eg. dbpedia - take everything in the 'Civil War' project and 
         # disambiguate against it.
+        if test:
+            print 'Not writing to db'
+            return
 
         # TODO
         # Replace relevant database entries with a single new disambiguated 
@@ -150,7 +153,7 @@ class FreebaseLinker(BaseLinker):
             # Note that this technique relies on the idea that we have a
             # good base of documents, because disambiguated possibilities
             # are verified by their presence in other documents.
-            if not self.fts:
+            if not fts:
                 query = 'SELECT * from articles WHERE text LIKE ?'
             else:
                 # Look for exact string match
