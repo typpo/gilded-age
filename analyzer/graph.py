@@ -25,21 +25,14 @@ class Graph:
         concepts extracted in analysis.
         """
 
-        # Import graphing libraries
         import matplotlib
         # Switch default output from X11
         matplotlib.use('Agg')
-
-        import networkx as nx
-        import numpy as np
-        import matplotlib.mlab as mlab
-        import matplotlib.pyplot as plt
 
         # Run query
         cur = self.conn.cursor()
         print 'Running query'
         query, queryargs = self._buildQueryFromArgs(limit=n, **kwargs)
-        print query
         cur.execute(query, queryargs)
         results = cur.fetchall()
 
@@ -63,6 +56,7 @@ class Graph:
     def histogram(self, n, **kwargs):
         """Draws a histogram of query results.
         n -- maximum number of distinct results"""
+        import matplotlib.pyplot as plt
         from datetime import datetime
 
         X_RANGE = 100
@@ -83,15 +77,21 @@ class Graph:
                 results[date] = 0
             results[date] += 1
 
+        print results
+
         mindate = min(results)
         maxdate = max(results)
+
+        print 'max date', maxdate
+        print 'min date', mindate
+
         # Get number of days in X axis and find the unit per day for an axis
         # with a fixed size
         delta = (maxdate-mindate).days
         adjustment_factor = delta / float(X_RANGE)
 
         histo_plot = {}
-        for result in results:
+        for date in results:
             # Calculate number of days from start and X value of this date
             days_passed = (date-mindate).days
             plot_value = days_passed * adjustment_factor
@@ -198,6 +198,11 @@ class Graph:
         return conceptedges
 
     def _writeGraph(self, concepts, conceptedges):
+        import networkx as nx
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import matplotlib.mlab as mlab
+
         g = nx.Graph()
         g.add_nodes_from(concepts.keys())
 
@@ -316,7 +321,8 @@ class Graph:
         return clause, args
 
     #
-    # --- OLDER FUNCTIONS that work on single articles. ---
+    # --- OLDER FUNCTIONS that work on single articles. Also, their queries 
+    # need to be rewritten ---
     #
     def getCategories(self, article):
         """Given an article, return its category"""

@@ -4,7 +4,7 @@ from db.articles import Article
 class NGrams(BaseAnalyzer):
     """Extracts ngrams from text"""
 
-    # Default max length of ngrams produced in by process
+    # Default max length of ngrams produced by execute() 
     defaultN = 7
 
     def __init__(self, conn):
@@ -24,13 +24,17 @@ class NGrams(BaseAnalyzer):
 
     def allngrams(self, n, text):
         """Returns ngrams of length up to n, starting at length 2"""
+        ret = []
         for i in range(2, n+1):
-            yield self.ngram(n, text)
+            ret.extend(self.ngram(n, text))
+        return ret
 
     def ngram(self, n, text):
         """Returns ngrams of length n"""
+        ret = []
 
         # Break into words
         words = text.split(' ')
         for i in range(len(words)-n+1):
-            yield words[i:i+n]
+            ret.append(words[i:i+n])
+        return ret
