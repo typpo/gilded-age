@@ -22,36 +22,73 @@ class Graph:
 
     def graph(self, n, **kwargs):
         """Creates a graph representing links between various entities and
-        concepts extracted in analysis.
+        concepts extracted in analysis. Writes an illustration to file.
         """
+        concepts, conceptedges = self._computeConceptGraph(n, **kwargs)
 
         import matplotlib
         # Switch default output from X11
         matplotlib.use('Agg')
 
-        # Run query
-        cur = self.conn.cursor()
-        print 'Running query'
-        query, queryargs = self._buildQueryFromArgs(limit=n, **kwargs)
-        cur.execute(query, queryargs)
-        results = cur.fetchall()
 
-        totalresults = len(results)
-        print totalresults, 'query results'
-
-        # Get dictionaries of article-concept relationships
-        print 'Creating hash tables'
-        articles, concepts = self._articleConceptRelations(results)
-
-        # Now link related concepts together
-        print 'Linking concepts'
-        conceptedges = self._linkRelatedConcepts(articles, concepts)
-
-        # Put this on a graph and write it to file
+        # Put this on a graph and write it to file.
         print 'Writing graph'
         self._writeGraph(concepts, conceptedges)
 
         print 'Done'
+
+    def csv(self, n, **kwargs):
+        """Writes a CSV that indicates relations between concepts and the 
+        number of times they occur."""
+        conceptdict, conceptedges = self._computeConceptGraph(n, **kwargs)
+        # Concept
+        # |- articles list
+        # |- alignment
+        # | |- # north
+        # | |- # south
+        concepts = conceptdict.keys()
+        concepts.sort()
+
+        import csv
+        writer = csv.writer(open('csv_output.csv', 'wb'))
+
+        # Construct top row of csv
+        top_row = ['']
+        top_row.extend(concepts)
+
+        # Add all the concepts to our graph
+        # and initialize the matrix.
+        # This is n^2 with a dict but we do a lot of lookups later.
+        d = {}
+        for concept in concepts:
+            d[concept] = {}
+            for other_concept in concepts:
+                d[concept][other_concept] = 0
+
+        # TODO unfortunately building a matrix means we have to duplicate 
+        # values - the edge graph is undirected (ie. does not 
+        # create duplicates), so we need to account for this.
+        # But let's just see if this works for now.
+        for edge in conceptedges:
+            a,b = edge
+            d[a][b] += conceptedges[edge]
+            d[b][a] += conceptedges[edge]
+
+        # Write to file
+        print 'Building csv'
+        writer.writerow(top_row)
+
+        sources = d.keys()
+        sources.sort()
+        for source in sources:
+            # Construct a row
+            row = [source]
+            destinations = d[source].keys()
+            destinations.sort()
+            for dest in destinations:
+                # Number of times this link appears
+                row.append(d[source][dest])
+            writer.writerow(row)
 
     def histogram(self, n, **kwargs):
         """Draws a histogram of query results.
@@ -196,6 +233,31 @@ class Graph:
                         conceptedges[edge] = 0
                     conceptedges[edge] += 1
         return conceptedges
+
+    def _computeConceptGraph(self, n, **kwargs):
+        """Creates a graph representing links between various entities and
+        concepts extracted in analysis. Returns a list of concepts and the
+        edges connecting them.
+        """
+        # Run query
+        cur = self.conn.cursor()
+        print 'Running query'
+        query, queryargs = self._buildQueryFromArgs(limit=n, **kwargs)
+        cur.execute(query, queryargs)
+        results = cur.fetchall()
+
+        totalresults = len(results)
+        print totalresults, 'query results'
+
+        # Get dictionaries of article-concept relationships
+        print 'Creating hash tables'
+        articles, concepts = self._articleConceptRelations(results)
+
+        # Now link related concepts together
+        print 'Linking concepts'
+        conceptedges = self._linkRelatedConcepts(articles, concepts)
+        
+        return concepts, conceptedges
 
     def _writeGraph(self, concepts, conceptedges):
         import networkx as nx

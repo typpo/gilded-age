@@ -3,7 +3,7 @@ from entitygram import EntityGram
 
 class EntityGramifier(BaseAnalyzer):
     """Provides tools to create entitygrams from a list of articles and
-    use that data in meaningful ways."""
+    apply that data in meaningful ways."""
     def __init__(self, conn):
         super(EntityGrams, self).__init__(conn)
 
