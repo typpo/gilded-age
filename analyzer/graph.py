@@ -39,7 +39,8 @@ class Graph:
 
     def csv(self, n, **kwargs):
         """Writes a CSV that indicates relations between concepts and the 
-        number of times they occur."""
+        number of times they occur.  This is different from the number of 
+        times words appear together in text."""
         conceptdict, conceptedges = self._computeConceptGraph(n, **kwargs)
         # Concept
         # |- articles list
@@ -50,10 +51,10 @@ class Graph:
         concepts.sort()
 
         import csv
-        writer = csv.writer(open('csv_output.csv', 'wb'))
+        writer = csv.writer(open('csv_output.csv', 'wb'), delimiter='\t')
 
         # Construct top row of csv
-        top_row = ['']
+        top_row = ['label']
         top_row.extend(concepts)
 
         # Add all the concepts to our graph
@@ -90,13 +91,15 @@ class Graph:
                 row.append(d[source][dest])
             writer.writerow(row)
 
-    def histogram(self, n, **kwargs):
-        """Draws a histogram of query results.
+    def plot(self, n, **kwargs):
+        """Plots query results over time.
         n -- maximum number of distinct results"""
+        import matplotlib
+        matplotlib.use('Agg')
         import matplotlib.pyplot as plt
-        from datetime import datetime
+        import datetime
 
-        X_RANGE = 100
+        X_RANGE = 1000
 
         # Query for article
         articles = self.getArticles(n, **kwargs)
@@ -106,43 +109,25 @@ class Graph:
         results = {}
         for article in articles:
             # Parse date
-            # TODO round to nearest month
             datestr = article.articleDate
-            date = datetime.strptime(datestr[:datestr.find(' ')], \
+            date = datetime.datetime.strptime(datestr[:datestr.find(' ')], \
                 '%Y-%m-%d')
+            # round down to first of month
+            date = datetime.date(date.year, date.month, 1)
             if date not in results:
                 results[date] = 0
             results[date] += 1
 
-        print results
+        # TODO normalize for total number of articles
 
-        mindate = min(results)
-        maxdate = max(results)
-
-        print 'max date', maxdate
-        print 'min date', mindate
-
-        # Get number of days in X axis and find the unit per day for an axis
-        # with a fixed size
-        delta = (maxdate-mindate).days
-        adjustment_factor = delta / float(X_RANGE)
-
-        histo_plot = {}
-        for date in results:
-            # Calculate number of days from start and X value of this date
-            days_passed = (date-mindate).days
-            plot_value = days_passed * adjustment_factor
-            histo_plot[plot_value] = results[result]
-
-        # Build histogram from X axis dates
-        x = histo_plot.keys()
-
-        # the histogram of the data
-        n, bins, patches = plt.hist(x, 50, normed=1, facecolor='green', alpha=0.75)
+        tuples = zip(results.keys(), results.values())
+        tuples.sort(lambda a,b: 1 if a[0] > b[0] else -1 if a[0] < b[0] else 0)
+        x,y = zip(*tuples)
+        plt.plot_date(x, y, linestyle='-')
 
         plt.xlabel('Date')
         plt.ylabel('Occurrences')
-        plt.title(r'Histogram')
+        plt.title(r'Plot)
 
         plt.grid(True)
         plt.axis('tight')
