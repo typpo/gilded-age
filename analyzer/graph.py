@@ -99,8 +99,6 @@ class Graph:
         import matplotlib.pyplot as plt
         import datetime
 
-        X_RANGE = 1000
-
         # Query for article
         articles = self.getArticles(n, **kwargs)
         print len(articles), 'article hits for query'
@@ -127,7 +125,7 @@ class Graph:
 
         plt.xlabel('Date')
         plt.ylabel('Occurrences')
-        plt.title(r'Plot)
+        plt.title(r'Plot')
 
         plt.grid(True)
         plt.axis('tight')
@@ -294,9 +292,13 @@ class Graph:
         plt.savefig('outputgraph.png')
 
     def _buildQueryFromArgs(self, **kwargs):
-        """Builds an SQL query from named parameters.
+        """Builds an SQL query from named parameters, or just returns an SQL 
+        query if it was specified.
+
+        Guide to building a query from components:
+
         This can handle any fields in all 3 (current) analysis tables as 
-        named arguments, as specified in cfg/graph.cfgi
+        named arguments, as specified in cfg/graph.cfg
 
         Special fields that correspond to SQL query options:
             limit - to limit number of results
@@ -306,48 +308,56 @@ class Graph:
         
         Default comparator is equals (=)
         """
+        
+        if 'query' in kwargs:
+            # Full query string is supplied, so use it.
+            query = kwargs['query']
+            queryargs = kwargs['queryargs']
+        else:
+            # Build a query string and incorporate specified
+            # components.
 
-        # TODO build date expression
+            # TODO build date expression
 
-        # Build queries for articles table:
-        queryparts = []
-        queryargs = ()
-        for arg in kwargs:
-            # Special fields
-            if arg=='limit' or (len(arg) > 0 and arg[0]=='_'):
-                continue
+            # Build queries for articles table:
+            queryparts = []
+            queryargs = ()
+            for arg in kwargs:
+                # Special fields
+                if arg=='limit' or (len(arg) > 0 and arg[0]=='_'):
+                    continue
 
-            # Validate fields
-            if arg not in VALID_SQL_COLUMNS:
-                print 'Invalid column will not be included in query:', arg
-                continue
+                # Validate fields
+                if arg not in VALID_SQL_COLUMNS:
+                    print 'Invalid column will not be included in query:', arg
+                    continue
 
-            # See if a specific comparator was supplied
-            comparator_key = '_' + arg
-            override_comparator = '=' 
-            if comparator_key in kwargs:
-                override_comparator = kwargs[comparator_key]
-                if override_comparator not in VALID_SQL_COMPARATORS:
-                    print 'Invalid comparator %s for column %s' % \
-                        (override_comparator, arg)
-                    return None, None
+                # See if a specific comparator was supplied
+                comparator_key = '_' + arg
+                override_comparator = '=' 
+                if comparator_key in kwargs:
+                    override_comparator = kwargs[comparator_key]
+                    if override_comparator not in VALID_SQL_COMPARATORS:
+                        print 'Invalid comparator %s for column %s' % \
+                            (override_comparator, arg)
+                        return None, None
 
-            clause, qargs = self._buildClause(arg, kwargs[arg],\
-                comparator=override_comparator)
-            queryparts.append(clause)
-            queryargs += qargs
+                clause, qargs = self._buildClause(arg, kwargs[arg],\
+                    comparator=override_comparator)
+                queryparts.append(clause)
+                queryargs += qargs
 
-        # Build query
-        query = BASE_QUERY
-        if len(queryparts) > 0:
-            query += ' WHERE '
-            query += ' AND '.join(queryparts)
+            # Build query
+            query = BASE_QUERY
+            if len(queryparts) > 0:
+                query += ' WHERE '
+                query += ' AND '.join(queryparts)
 
-        # Order by # of occurences in overall analysis
-        query += ' ORDER BY count DESC'
+            # Order by # of occurences in overall analysis
+            query += ' ORDER BY count DESC'
 
-        if 'limit' in kwargs:
-            query += ' LIMIT ' + str(int(kwargs['limit']))
+            if 'limit' in kwargs:
+                query += ' LIMIT ' + str(int(kwargs['limit']))
 
         return query, queryargs
 
@@ -369,8 +379,48 @@ class Graph:
 
     #
     # --- OLDER FUNCTIONS that work on single articles. Also, their queries 
-    # need to be rewritten ---
+    # need to be rewritten to joins...unless FTS won't work that way?---
     #
+
+    def glomMetadata(self, articles):
+        """Loops through given articles and adds metadata (entity data)
+        to the result.  Will duplicate articles with multiple entries.
+        
+        This is slow for many articles!  But because FTS has problems with
+        joining, it is a temporary solution."""
+
+        cur = self.conn.cursor()
+        
+        ret = []
+        print 'Glomming', len(articles), 'articles...'
+        i=0
+        for article in articles:
+            print i,'...',
+            i+=1
+            # Note that timeEnter is omitted.
+            articledata = (article.id, article.source, article.alignment, \
+                article.page, article.title, article.summary, article.text, \
+                article.url, article.articleDate)
+
+            # Find results linked to this article.
+            query = 'SELECT * from calais_results WHERE article_id=?'
+            cur.execute(query, (article.id,))
+            results = db.calaisresults.processAll(cur.fetchall())
+
+            for result in results:               
+                # Get all relations linked to the article.
+                query = 'SELECT * from calais_items WHERE id=?'
+                cur.execute(query, (result.relation_id,))
+                relations = db.calaisitems.processAll(cur.fetchall())
+
+                for relation in relations:
+                    fulldata = articledata + (relation.type, relation.data, \
+                        relation.count)
+                    ret.append(fulldata)
+
+        print 'Done'
+        return ret
+
     def getCategories(self, article):
         """Given an article, return its category"""
         if not isinstance(article, db.articles.Article):
