@@ -20,11 +20,13 @@ class Graph:
     def __init__(self, conn):
         self.conn = conn
 
-    def graph(self, n, **kwargs):
+    def graph(self, results=None):
         """Creates a graph representing links between various entities and
         concepts extracted in analysis. Writes an illustration to file.
         """
-        concepts, conceptedges = self._computeConceptGraph(n, **kwargs)
+        if results is None:
+            results = self._runQueryFromArgs(n, **kwargs)
+        concepts, conceptedges = self._computeConceptGraph(results)
 
         import matplotlib
         # Switch default output from X11
@@ -37,11 +39,13 @@ class Graph:
 
         print 'Done'
 
-    def csv(self, n, **kwargs):
+    def csv(self, results=None):
         """Writes a CSV that indicates relations between concepts and the 
         number of times they occur.  This is different from the number of 
         times words appear together in text."""
-        conceptdict, conceptedges = self._computeConceptGraph(n, **kwargs)
+        if results is None:
+            results = self._runQueryFromArgs(n, **kwargs)
+        conceptdict, conceptedges = self._computeConceptGraph(results)
         # Concept
         # |- articles list
         # |- alignment
@@ -141,7 +145,7 @@ class Graph:
         """
         cur = self.conn.cursor()
 
-        query, queryargs = self._buildQueryFromArgs(limit=limit, **kwargs)
+        query, queryargs = self._runQueryFromArgs(limit=limit, **kwargs)
         cur.execute(query, queryargs)
         results = cur.fetchall()
         return db.articles.processAll(results)
@@ -217,21 +221,11 @@ class Graph:
                     conceptedges[edge] += 1
         return conceptedges
 
-    def _computeConceptGraph(self, n, **kwargs):
+    def _computeConceptGraph(self, results):
         """Creates a graph representing links between various entities and
         concepts extracted in analysis. Returns a list of concepts and the
         edges connecting them.
         """
-        # Run query
-        cur = self.conn.cursor()
-        print 'Running query'
-        query, queryargs = self._buildQueryFromArgs(limit=n, **kwargs)
-        cur.execute(query, queryargs)
-        results = cur.fetchall()
-
-        totalresults = len(results)
-        print totalresults, 'query results'
-
         # Get dictionaries of article-concept relationships
         print 'Creating hash tables'
         articles, concepts = self._articleConceptRelations(results)
@@ -291,9 +285,11 @@ class Graph:
         plt.axis('tight')
         plt.savefig('outputgraph.png')
 
-    def _buildQueryFromArgs(self, **kwargs):
+    def _runQueryFromArgs(self, **kwargs):
         """Builds an SQL query from named parameters, or just returns an SQL 
         query if it was specified.
+
+        Also, runs the query.
 
         Guide to building a query from components:
 
@@ -359,7 +355,17 @@ class Graph:
             if 'limit' in kwargs:
                 query += ' LIMIT ' + str(int(kwargs['limit']))
 
-        return query, queryargs
+        # Run query
+        cur = self.conn.cursor()
+        print 'Running query'
+        query, queryargs = self._runQueryFromArgs(limit=n, **kwargs)
+        cur.execute(query, queryargs)
+        results = cur.fetchall()
+
+        totalresults = len(results)
+        print totalresults, 'query results'
+        return results
+
 
     def _buildClause(self, field, values, comparator='='):
         """ORs together values of a field to construct a sql where clause
@@ -377,11 +383,6 @@ class Graph:
 
         return clause, args
 
-    #
-    # --- OLDER FUNCTIONS that work on single articles. Also, their queries 
-    # need to be rewritten to joins...unless FTS won't work that way?---
-    #
-
     def glomMetadata(self, articles):
         """Loops through given articles and adds metadata (entity data)
         to the result.  Will duplicate articles with multiple entries.
@@ -393,10 +394,7 @@ class Graph:
         
         ret = []
         print 'Glomming', len(articles), 'articles...'
-        i=0
         for article in articles:
-            print i,'...',
-            i+=1
             # Note that timeEnter is omitted.
             articledata = (article.id, article.source, article.alignment, \
                 article.page, article.title, article.summary, article.text, \
@@ -406,6 +404,8 @@ class Graph:
             query = 'SELECT * from calais_results WHERE article_id=?'
             cur.execute(query, (article.id,))
             results = db.calaisresults.processAll(cur.fetchall())
+
+            # TODO join these
 
             for result in results:               
                 # Get all relations linked to the article.
@@ -420,6 +420,11 @@ class Graph:
 
         print 'Done'
         return ret
+
+    #
+    # --- OLDER FUNCTIONS that work on single articles. Also, their queries 
+    # need to be rewritten to joins...unless FTS won't work that way?---
+    #
 
     def getCategories(self, article):
         """Given an article, return its category"""
