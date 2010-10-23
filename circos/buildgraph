@@ -1,0 +1,19 @@
+#!/bin/bash
+
+#
+# Builds Circos graph using CSV matrix output from Graph module.
+#
+# Uses Circos tableviewer, so this is meant to be run from the tableviewer 
+# directory.
+#
+
+if [ $# -ne 1 ]
+then
+    echo "Usage: buildgraph output.csv"
+    exit 1
+fi
+
+echo "Building graph from $1"
+
+cat $1 | bin/parse-table | bin/make-conf -dir data
+../../bin/circos -conf etc/circos.conf
