@@ -41,15 +41,14 @@ class LexicalDisambiguator:
 
         # eg. substrings, different cases, without punctuation (washington d.c.)
         # normalize case, remove punctuation
+        # TODO normalize entities
         value_normalized = re.sub('[\.-]', '', value.lower())
 
         # Records results that produced nonzero matches with normalized values
         results = []
         for item in self.entities:
             # Look matches on both type AND value are higher probability
-            highprobability = False
-            if item.type == type:
-                highprobability = True
+            typematch = item.type == type
 
             # equivalence
             match = 0.0
@@ -72,4 +71,4 @@ class LexicalDisambiguator:
             print 'Not writing to db'
             return
         
-        # TODO
+        # TODO write to database

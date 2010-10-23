@@ -1,6 +1,7 @@
 from scraper.valleyscraper import ValleyScraper
 from analyzer.calaisanalyzer import CalaisAnalyzer
 from analyzer.graph import Graph
+from analyzer.tagcloud import TagCloud
 from linker.freebaselinker import FreebaseLinker
 from pysqlite2 import dbapi2 as sqlite
 import db.articles

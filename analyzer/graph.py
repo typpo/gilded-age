@@ -32,7 +32,6 @@ class Graph:
         # Switch default output from X11
         matplotlib.use('Agg')
 
-
         # Put this on a graph and write it to file.
         print 'Writing graph'
         self._writeGraph(concepts, conceptedges)
@@ -395,10 +394,10 @@ class Graph:
         ret = []
         print 'Glomming', len(articles), 'articles...'
         for article in articles:
-            # Note that timeEnter is omitted.
+            # TODO omit timeEnter?
             articledata = (article.id, article.source, article.alignment, \
                 article.page, article.title, article.summary, article.text, \
-                article.url, article.articleDate)
+                article.url, article.articleDate, article.timeEnter)
 
             # Find results linked to this article.
             query = 'SELECT * from calais_results WHERE article_id=?'

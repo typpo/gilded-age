@@ -14,13 +14,19 @@ class NGrams(BaseAnalyzer):
         """Extracts ngrams from article text.
         Returns a dictionary keyed by ngram with frequency as a value.
         """
-        d = {}
+        return self.execute(articles, {})
+
+    def execute(self, articles, d):
+        """Extracts ngrams from article text.  Adds to an existing dictionary.
+        Returns a dictionary keyed by ngram with frequency as a value.
+        """
         for article in articles:
             for ngram in self.allngrams(self.defaultN, article.text):
                 if ngram not in d:
                     d[ngram] = 0
                 d[ngram] += 1
         return d
+
 
     def allngrams(self, n, text):
         """Returns ngrams of length up to n, starting at length 2"""
