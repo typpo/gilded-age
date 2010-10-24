@@ -3,8 +3,11 @@ from graph import Graph
 import db.articles
 import math
 
-FILTERS = 'analyzer/commonwords'     # file containing 100 common words
-MAX_WORD_LEN = 3
+FILTERS = 'analyzer/commonwords'    # file containing (100) common words
+MAX_WORD_LEN = 3                    # reject words shorter than this
+
+HTML_FONT_MIN = 6                   # minimum html font size, in pixels
+HTML_FONT_MAX = 48                  # maximum html font size, in pixels
 
 class TagCloud(BaseAnalyzer):
     """Makes a logarithmic tag cloud from article text."""
@@ -56,28 +59,41 @@ class TagCloud(BaseAnalyzer):
             self.loaded_common_words = True
         return self.words
 
+    def writeHTML(self, cloudtable):
+        range = HTML_FONT_MAX - HTML_FONT_MIN
+        # Get max value
+        max_count = max(cloudtable, key=lambda x: cloudtable.get(x))
+
+        # Write tag cloud
+        f = open('tagcloud.html', 'w')
+        for word, count in cloudtable.items():
+            if count < 2:
+                continue
+            # TODO normalize by number of articles these words appear in...
+            # otherwise we just get common entities like Congress
+
+            # Write words with sizes spread out in tag cloud font size range
+            f.write('<span style="font-size:%dpx">%s</span>' % \
+                (HTML_FONT_MIN+((count*range)/HTML_FONT_MAX),word))
+        f.close()
+
     def test(self):
         cur = self.conn.cursor()
         cur.execute('select * from articles_fts where text MATCH "corruption"')
         f=cur.fetchall()
         a=db.articles.processAll(f)
         q=self.execute(a, use_entities=True)
-        for x in q:
-            if int(x.items()[0][1]) > 1:
-                print x
 
-    def generate(self, words):
-         """
-         Produce HTML tag cloud.
-         Based on http://snipplr.com/view/8875/tag-cloud/
-         """
-         return ' '.join([('<font size="%d">%s</font>'%(min(1+p*5/max(words.values()), 5), x)) for (x, p) in words.items()])
+        self.writeHTML(q)
 
     def makeCloud(self, steps, input):
         """
-        From http://www.chasedavis.com/2007/jan/16/log-based-tag-clouds-python/
+        Logarithmic tag cloud
+        Modified slightly from:
+        http://www.chasedavis.com/2007/jan/16/log-based-tag-clouds-python/
         """
-        temp, newThresholds, results = [], [], []
+        temp, newThresholds = [], []
+        results = {}
         for item in input:
             temp.append(item[1])
         maxWeight = float(max(temp))
@@ -89,6 +105,6 @@ class TagCloud(BaseAnalyzer):
             fontSet = False
             for threshold in newThresholds[1:int(steps)+1]:
                 if (100 * math.log(tag[1] + 2)) <= threshold[0] and not fontSet:
-                    results.append(dict({str(tag[0]):str(threshold[1])}))
+                    results[str(tag[0])] = threshold[1]
                     fontSet = True
         return results
