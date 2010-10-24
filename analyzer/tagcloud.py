@@ -6,8 +6,8 @@ import math
 FILTERS = 'analyzer/commonwords'    # file containing (100) common words
 MAX_WORD_LEN = 3                    # reject words shorter than this
 
-HTML_FONT_MIN = 6                   # minimum html font size, in pixels
-HTML_FONT_MAX = 48                  # maximum html font size, in pixels
+HTML_FONT_MIN = 8                   # minimum html font size, in pixels
+HTML_FONT_MAX = 128                 # maximum html font size, in pixels
 
 class TagCloud(BaseAnalyzer):
     """Makes a logarithmic tag cloud from article text."""
@@ -62,7 +62,7 @@ class TagCloud(BaseAnalyzer):
     def writeHTML(self, cloudtable):
         range = HTML_FONT_MAX - HTML_FONT_MIN
         # Get max value
-        max_count = max(cloudtable, key=lambda x: cloudtable.get(x))
+        max_count = cloudtable[max(cloudtable, key=lambda x: cloudtable.get(x))]
 
         # Write tag cloud
         f = open('tagcloud.html', 'w')
@@ -74,7 +74,7 @@ class TagCloud(BaseAnalyzer):
 
             # Write words with sizes spread out in tag cloud font size range
             f.write('<span style="font-size:%dpx">%s</span>' % \
-                (HTML_FONT_MIN+((count*range)/HTML_FONT_MAX),word))
+                (HTML_FONT_MIN+count*range/max_count, word))
         f.close()
 
     def test(self):
