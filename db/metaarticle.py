@@ -21,3 +21,5 @@ class MetaArticle:
         self.relation_type = row[10]
         self.relation_data = row[11]
         self.relation_count = row[12]
+        # Relative frequency of this relation in results
+        self.relation_relative = row[13] if len(row) > 14 else None

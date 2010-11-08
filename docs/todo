@@ -1,0 +1,5 @@
+
+normalize entity results so that popular terms aren't disproportionately 
+represented when they shouldn't be.
+
+implement use of MetaArticle type in graph, etc.

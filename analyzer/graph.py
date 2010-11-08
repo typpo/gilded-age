@@ -42,6 +42,7 @@ class Graph:
         """Writes a CSV that indicates relations between concepts and the 
         number of times they occur.  This is different from the number of 
         times words appear together in text."""
+            # TODO normalize by number of articles
         if results is None:
             results = self._runQueryFromArgs(n, **kwargs)
         conceptdict, conceptedges = self._computeConceptGraph(results)
